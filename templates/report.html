@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Submit Your Report</h1>
+
+        <!-- Flash message for successful submission -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash-message">
+              {% for message in messages %}
+                <p>{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Form for submitting the report -->
+        <form method="POST" action="{{ url_for('views.report') }}">
+            
+            <div class="form-group">
+                <label for="report_title">Report Title:</label>
+                <textarea id="report_title" name="report_title" rows="2" cols="50" placeholder="Title" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="report">Your Report:</label>
+              <textarea id="report_desc" name="report_desc" rows="10" cols="50" placeholder="Enter your report here" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Report</button>
+        </form>
+    </div>
+</body>
+</html>
