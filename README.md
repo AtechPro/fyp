@@ -11,7 +11,8 @@ local usage, local network, closed network = more secure right (can't avoid tail
 
 ## DockerFile 
 
-```
+i consider to intergrate with docker but sadly not able to do it, needed MacVlan (on future if i remember)
+``` 
 # Use the official Python image from the Docker Hub
 FROM python:3.9-slim
 
@@ -35,3 +36,7 @@ EXPOSE 8080
 CMD ["python", "app.py"]
 
 ```
+
+## additional note
+
+why i still here? just to suffer
