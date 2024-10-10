@@ -37,12 +37,12 @@ CMD ["python", "app.py"]
 
 ```
 ## system requirements
-32 bit linux (any linux should be able to run)
-raspberry pi 3 or 4 (any raspberry pi should be able to run)
-ESP32 or ESP8266 (any ESP should be able to run)
-need more that 2 interface, such as wifi, ethernet. Why the reasons? Because:
-- one interface need to be connected to local network, ethernet or build in wifi are recommended to use
-- another interface responsible for MQTT communication, if saying that you use wifi, its recommended using usb wifi
+- 32 bit linux (any linux should be able to run)
+- raspberry pi 3 or 4 (any raspberry pi should be able to run)
+- ESP32 or ESP8266 (any ESP should be able to run)
+- need more that 2 interface, such as wifi, ethernet. Why the reasons? Because:
+    > one interface need to be connected to local network, ethernet or build in wifi are recommended to use
+    > another interface responsible for MQTT communication, if saying that you use wifi, its recommended using usb wifi
 
 
 
