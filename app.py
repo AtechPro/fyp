@@ -1,6 +1,7 @@
 from flask import Flask
 from database.database import db, User #need to mention the class one by one
 from view import views  # Import views
+from templates.usermanage.usermanage import usermanage
 from flask_login import LoginManager
 from datetime import timedelta
 
@@ -40,8 +41,8 @@ def create_initial_user(app):
 
 
 app.register_blueprint(views) #web viewing
+app.register_blueprint(usermanage)
 
-#changing the session instead of user_loder this is legacy code but atm i still have no idea what to do goodluck
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))

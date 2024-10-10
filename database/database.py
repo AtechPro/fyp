@@ -13,6 +13,9 @@ class User(db.Model, UserMixin):
 
     def get_id(self):
         return str(self.userid)
+    
+    def is_admin(self):
+        return self.role == 1
 
 class Report(db.Model):
     __tablename__ = 'reports'
