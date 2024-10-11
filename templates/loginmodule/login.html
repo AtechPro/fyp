@@ -6,6 +6,15 @@
     <title>Login</title>
     <link rel="stylesheet" href="..\static\login.css">
 </head>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+                const error = urlParams.get('error');
+            
+                if (error === 'invalid_credentials') {
+                    alert('Invalid username or password.');
+                }
+    </script>    
 <body>
 
     <div class="login-container">
@@ -21,6 +30,9 @@
             <p>New user? <a href="/register">Register here</a></p>
         </form>
     </div>
+
+
+        
 
 </body>
 </html>

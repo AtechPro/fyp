@@ -60,7 +60,7 @@ def report():
         db.session.commit()
         flash('Report submitted successfully')
         return redirect(url_for('views.report'))
-    return render_template('report.html')
+    return render_template('report/report.html')
 
 
 @views.route('/logout')
