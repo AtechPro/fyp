@@ -28,16 +28,24 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
+    table-layout: auto; /* Allow the table to be more compact */
 }
 
 table th, table td {
-    padding: 10px;
+    padding: 8px; /* Reduce padding to make the table tidier */
     text-align: left;
     border-bottom: 1px solid #ddd;
+    font-size: 14px; /* Adjust font size for a more compact look */
 }
 
 table th {
     background-color: #f8f8f8;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+table tr:hover {
+    background-color: #f1f1f1; /* Hover effect on table rows */
 }
 
 .edit-btn, .delete-btn {

@@ -4,41 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Management</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            background-color: #fff;
-        }
-
-        table th, table td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-
-        table th {
-            background-color: #f8f8f8;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="../static/usermanage.css">
 </head>
 <body>
-
     <h1>User Management</h1>
 
     <table>
@@ -48,6 +16,7 @@
                 <th>Username</th>
                 <th>Name</th>
                 <th>Role</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -58,10 +27,19 @@
                 <td>{{ user.username }}</td>
                 <td>{{ user.name }}</td>
                 <td>{{ 'Admin' if user.role == 1 else 'User' }}</td>
+                <td>
+                    <!-- Action buttons -->
+                    <button type="button">Edit</button>
+                    <button type="button">Delete</button>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    
+    <!-- Button to add a new user -->
+    <button type="button">Add User</button>
+    
 
 </body>
 </html>
