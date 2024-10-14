@@ -71,14 +71,6 @@ def logout():
     return redirect(url_for('views.login'))
 
 
-@views.route('/adminpage')
-@login_required
-def adminpage():
-    if not current_user.is_admin():
-        flash('You do not have permission to access this page.')
-        return redirect(url_for('views.home'))
-    return render_template('admintest.html')
-
 
 
 
