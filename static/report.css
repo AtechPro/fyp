@@ -94,6 +94,32 @@ textarea:focus {
     background-color: #45a049;
 }
 
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse; /* Merges border lines */
+    margin-top: 20px; /* Adds spacing above the table */
+}
+
+th, td {
+    padding: 12px; /* Adds padding inside cells */
+    border: 1px solid #ccc; /* Sets border for table cells */
+    text-align: left; /* Aligns text to the left */
+}
+
+th {
+    background-color: #4CAF50; /* Sets background color for header */
+    color: white; /* Sets text color for header */
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2; /* Stripes the table rows */
+}
+
+tr:hover {
+    background-color: #e0e0e0; /* Changes row background on hover */
+}
+
 /* Responsive design */
 @media (max-width: 600px) {
     .container {
@@ -111,5 +137,10 @@ textarea:focus {
     .btn {
         font-size: 14px;
         padding: 10px;
+    }
+
+    th, td {
+        padding: 10px; /* Adjust padding for smaller screens */
+        font-size: 14px; /* Adjust font size for smaller screens */
     }
 }

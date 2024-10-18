@@ -2,6 +2,7 @@ from flask import Flask
 from database.database import db, User #need to mention the class one by one
 from view import views  # Import views
 from templates.usermanage.usermanage import usermanage
+from templates.report.report import report_module
 from flask_login import LoginManager
 from datetime import timedelta
 # from mqtttest.com import 
@@ -44,8 +45,9 @@ def create_initial_user(app):
             print("Admin user already exists.")
 
 
-app.register_blueprint(views) #web viewing
+app.register_blueprint(views) 
 app.register_blueprint(usermanage)
+app.register_blueprint(report_module)
 
 @login_manager.user_loader
 def load_user(user_id):

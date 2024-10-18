@@ -49,57 +49,9 @@ def register():
     return render_template('loginmodule/register.html')
 
 
-@views.route('/report', methods=['GET', 'POST'])
-@login_required
-def report():
-    if request.method == 'POST':
-        report_title = request.form['report_title']
-        report_desc = request.form['report_desc']
-        new_report = Report(userid=current_user.userid, username=current_user.username, report_title=report_title, report_desc=report_desc)
-        db.session.add(new_report)
-        db.session.commit()
-        flash('Report submitted successfully')
-        return redirect(url_for('views.report'))
-    return render_template('report/report.html')
-
-
 @views.route('/logout')
 @login_required
 def logout():
     logout_user()
     session.clear()
     return redirect(url_for('views.login'))
-
-
-
-
-
-"""
-@views.route('/backup-restore')
-def backup_restore():
-    return render_template('backup_restore.html')
-
-@views.route('/automation-rule')
-def automation_rule():
-    return render_template('automation_rule.html')
-
-@views.route('/user-management')
-def user_management():
-    return render_template('user_management.html')
-
-@views.route('/device-management')
-def device_management():
-    return render_template('device_management.html')
-
-@views.route('/zone-management')
-def zone_management():
-    return render_template('zone_management.html')
-
-@views.route('/timer-scheduler')
-def timer_scheduler():
-    return render_template('timer_scheduler.html')
-
-"""
-
-
-

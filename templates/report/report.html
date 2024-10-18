@@ -22,7 +22,7 @@
         {% endwith %}
 
         <!-- Form for submitting the report -->
-        <form method="POST" action="{{ url_for('views.report') }}">
+        <form method="POST" action="{{ url_for('report.submit_report') }}">
             
             <div class="form-group">
                 <label for="report_title">Report Title:</label>
