@@ -33,5 +33,5 @@ Local usage, local network, closed network = more secure right (can't avoid tail
 
 - Why I'm still here? just to suffer? 
 - You are totally cooked when you are ran out of your time and not doing thing that productive
-- https://onedrive.live.com/view.aspx?resid=D41B8F016CAEF97F%2111202&id=documents&wd=target%28EP%205%5EJ%20Your%20Biggest%20Obstacle%5EJ%20Your%20Biggest%20Fear.one%7C87F96102-AC64-4D39-98BE-CB8C7409C468%2F%29 (The lore of the project)
+
 
