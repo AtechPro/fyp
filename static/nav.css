@@ -2,33 +2,34 @@ body {
     font-family: Arial, sans-serif;
 }
 
-.navbar {
-    background-color: #333;
-    overflow: hidden;
-}
-
-.navbar-container {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
+.sidebar {
+    height: 100vh; /* Full height for sidebar */
+    width: 250px; /* Fixed width for sidebar */
+    background-color: #333; /* Same background color */
+    position: fixed; /* Fixes sidebar in place */
+    top: 0; /* Aligns to the top */
+    left: 0; /* Aligns to the left */
+    padding-top: 20px; /* Space at the top */
 }
 
 .navbar-links {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
+    list-style-type: none; /* Removes bullets from list */
+    margin: 0; /* Removes margin */
+    padding: 0; /* Removes padding */
 }
 
 .navbar-links li {
-    display: inline;
-    margin-right: 15px;
+    margin-bottom: 15px; /* Space between items */
 }
 
 .navbar-links a {
-    color: white;
-    text-decoration: none;
+    color: white; /* Text color for links */
+    text-decoration: none; /* No underline by default */
+    display: block; /* Makes the link fill the list item */
+    padding: 10px; /* Adds padding around links */
 }
 
 .navbar-links a:hover {
-    text-decoration: underline;
+    background-color: #444; /* Changes background on hover */
+    text-decoration: none; /* Keep no underline on hover */
 }

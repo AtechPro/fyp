@@ -12,7 +12,7 @@ def list_users():
   
     if not current_user.is_admin():
         flash("Access denied. Admins only.")
-        return redirect(url_for('index'))
+        return redirect(url_for('views.home'))
 
     users = User.query.all()
     return render_template('usermanage/usermanage.html', users=users)
@@ -27,7 +27,6 @@ def edit_user(id):
     user = User.query.get_or_404(id)
 
     if request.method == 'POST':
-        # Update user details
         user.username = request.form['username']
         user.name = request.form['name']
         user.role = int(request.form['role'])  # Convert role to integer (1 for Admin, 0 for User)
@@ -36,6 +35,8 @@ def edit_user(id):
         return redirect(url_for('usermanage.list_users'))
 
     return render_template('usermanage/edit_user.html', user=user)
+
+
 
 @usermanage.route('/delete_user/<int:userid>', methods=['POST'])
 @login_required
