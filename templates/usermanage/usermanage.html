@@ -29,17 +29,30 @@
                 <td>{{ 'Admin' if user.role == 1 else 'User' }}</td>
                 <td>
                     <!-- Action buttons -->
-                    <button type="button">Edit</button>
-                    <button type="button">Delete</button>
+                    <a href="{{ url_for('usermanage.edit_user', id=user.userid) }}"><button type="button">Edit</button></a>
+                    <form action="{{ url_for('usermanage.delete_user', id=user.userid) }}" method="POST" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    
-    <!-- Button to add a new user -->
-    <button type="button">Add User</button>
-    
+
+    <!-- Form to add a new user -->
+    <h2>Add New User</h2>
+    <form action="{{ url_for('usermanage.list_users') }}" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required>
+        <label for="role">Role:</label>
+        <select id="role" name="role">
+            <option value="0">User</option>
+            <option value="1">Admin</option>
+        </select>
+        <button type="submit">Add User</button>
+    </form>
 
 </body>
 </html>

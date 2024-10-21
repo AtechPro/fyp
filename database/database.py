@@ -28,7 +28,7 @@ class Report(db.Model):
 
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
 
-# You can add other models like Scheduler, Automate, Dashboard here as needed
+# Other CRUD 
 """
 class Device(db.Model):
     __tablename__ = 'devices'
