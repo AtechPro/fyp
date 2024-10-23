@@ -17,6 +17,8 @@ def list_users():
     users = User.query.all()
     return render_template('usermanage/usermanage.html', users=users)
 
+
+
 @usermanage.route('/users/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_user(id):
@@ -29,7 +31,16 @@ def edit_user(id):
     if request.method == 'POST':
         user.username = request.form['username']
         user.name = request.form['name']
-        user.role = int(request.form['role'])  # Convert role to integer (1 for Admin, 0 for User)
+        
+        # Check if the user being edited is the current admin
+        if current_user.id == user.id and int(request.form['role']) != current_user.role:
+            flash("You cannot change your own role while logged in.", 'error')
+            return redirect(url_for('usermanage.edit_user', id=id))
+
+        # Update the user's role if not demoting themselves
+        user.role = int(request.form['role'])  
+        
+        # Commit changes to the database
         db.session.commit()
         flash("User updated successfully.")
         return redirect(url_for('usermanage.list_users'))
@@ -38,18 +49,33 @@ def edit_user(id):
 
 
 
+
 @usermanage.route('/delete_user/<int:userid>', methods=['POST'])
 @login_required
 def delete_user(userid):
+    # Ensure the current user is an admin
     if not current_user.is_admin():
-        flash("Access denied. Admins only.")
+        flash("Access denied. Admins only.", 'error')
         return redirect(url_for('usermanage.list_users'))
 
-    user = User.query.get_or_404(userid)
-    db.session.delete(user)
-    db.session.commit()
+    # Prevent the admin from deleting their own account
+    if current_user.userid == userid:
+        flash("You cannot delete your own account while logged in.", 'error')
+        return redirect(url_for('usermanage.list_users'))
 
-    flash('User deleted successfully')
+    # Fetch the user to be deleted or 404 if not found
+    user = User.query.get_or_404(userid)
+    
+    try:
+        # Delete the user and commit changes
+        db.session.delete(user)
+        db.session.commit()
+
+        flash('User deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'An error occurred while trying to delete the user: {str(e)}', 'error')
+
     return redirect(url_for('usermanage.list_users'))
 
 @usermanage.route('/add_user', methods=['GET', 'POST'])
