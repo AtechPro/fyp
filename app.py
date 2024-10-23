@@ -1,15 +1,11 @@
 from flask import Flask
 from database.database import db, User #need to mention the class one by one
-from view import views  
+from view import views
+from mqtttest.mqttdebug import mqtt_testing
 from templates.usermanage.usermanage import usermanage
 from templates.report.report import report_module
 from flask_login import LoginManager
 from datetime import timedelta
-# from mqtttest.com import 
-
-
-
-
 app = Flask(__name__)
 
 # Configuration
@@ -17,6 +13,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../database/database.db'  # D
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = "mysecretkey"  
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
+
+app.register_blueprint(views) 
+app.register_blueprint(usermanage)
+app.register_blueprint(report_module)
+app.register_blueprint(mqtt_testing)
 
 
 # Initialize the database
@@ -45,9 +46,6 @@ def create_initial_user(app):
             print("Admin user already exists.")
 
 
-app.register_blueprint(views) 
-app.register_blueprint(usermanage)
-app.register_blueprint(report_module)
 
 @login_manager.user_loader
 def load_user(user_id):

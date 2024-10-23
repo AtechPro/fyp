@@ -34,7 +34,7 @@ def edit_user(id):
         
         # Check if the user being edited is the current admin
         if current_user.id == user.id and int(request.form['role']) != current_user.role:
-            flash("You cannot change your own role while logged in.", 'error')
+            flash("You cannot change your own role while logged in.", 'error') #will use javascript or npm
             return redirect(url_for('usermanage.edit_user', id=id))
 
         # Update the user's role if not demoting themselves
@@ -53,24 +53,19 @@ def edit_user(id):
 @usermanage.route('/delete_user/<int:userid>', methods=['POST'])
 @login_required
 def delete_user(userid):
-    # Ensure the current user is an admin
+    
     if not current_user.is_admin():
         flash("Access denied. Admins only.", 'error')
         return redirect(url_for('usermanage.list_users'))
 
-    # Prevent the admin from deleting their own account
     if current_user.userid == userid:
         flash("You cannot delete your own account while logged in.", 'error')
         return redirect(url_for('usermanage.list_users'))
 
-    # Fetch the user to be deleted or 404 if not found
     user = User.query.get_or_404(userid)
-    
     try:
-        # Delete the user and commit changes
         db.session.delete(user)
         db.session.commit()
-
         flash('User deleted successfully', 'success')
     except Exception as e:
         db.session.rollback()
@@ -96,8 +91,7 @@ def add_user():
             flash('Username already exists')
             return redirect(url_for('usermanage.add_user'))
 
-        # By default, new users will have a role of 0 (normal user)
-        role = int(request.form['role'])  # Convert role to integer
+        role = int(request.form['role'])  
 
         # Create new user
         new_user = User(username=username, name=name, role=role, password=password)
