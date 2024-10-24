@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, request, flash
 from flask_login import login_required
 import paho.mqtt.client as mqtt
+import socketio as socket
 import time
 
-mqtt_testing = Blueprint('mqtt_test', __name__)
+mqtt_testing = Blueprint('mqtt_test', __name__, template_folder='mqtttest')
 
 # MQTT Configuration
-MQTT_BROKER = "localhost"  # Change to your MQTT broker address
+MQTT_BROKER = "localhost" 
 MQTT_PORT = 1883
 MQTT_TOPIC = "test/topic"
 
@@ -50,7 +51,7 @@ def mqtt_test():
     time.sleep(1)  # Let the loop run for a second
     mqtt_client.loop_stop()
 
-    return render_template('mqtttest.html')
+    return render_template('mqtttest/mqtt_test1.html')
 
 # Clean up and disconnect the MQTT client on app context shutdown
 @mqtt_testing.teardown_app_request
