@@ -1,7 +1,7 @@
 from flask import Flask
 from database.database import db, User #need to mention the class one by one
 from view import views
-from mqtttest.mqttdebug import mqtt_testing
+from templates.mqtt_testing.mqttdebug import mqtt_testing
 from templates.usermanage.usermanage import usermanage
 from templates.report.report import report_module
 from flask_login import LoginManager
