@@ -24,6 +24,13 @@
         <!-- Form to send MQTT message -->
         <form method="POST" action="{{ url_for('mqtt_test.mqtt_test') }}">
             <div class="mb-3">
+                <label for="topic" class="form-label">Select Topic</label>
+                <select class="form-select" id="topic" name="topic" required>
+                    <option value="esp/d3/led">LED Control (esp/d3/led)</option>
+                    <option value="esp/d4/infrared">Infrared Control (esp/d4/infrared)</option>
+                </select>
+            </div>
+            <div class="mb-3">
                 <label for="message" class="form-label">Message to Send</label>
                 <input type="text" class="form-control" id="message" name="message" required>
             </div>
