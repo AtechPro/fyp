@@ -5,7 +5,6 @@
 }
 
 
-/* Sidebar styles */
 
 body {
     font-family: Arial, sans-serif;
@@ -100,7 +99,8 @@ select[multiple] {
     height: 100px;
 }
 
-.sidebar {
+
+    .sidebar {
     height: 100vh; /* Full height */
     width: 250px; /* Fixed width */
     position: fixed; /* Fixed positioning */
