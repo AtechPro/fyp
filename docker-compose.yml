@@ -1,4 +1,4 @@
-version: '4'
+version: '3.9'
 
 services:
   web:
@@ -19,6 +19,13 @@ services:
     volumes:
       - ./mosquitto/config.db:/etc/mosquitto/mosquitto.db
 
+  mqtt-dashboard:
+    image: emqx/emqx
+    ports:
+      - "8080:18083"
+
+    depends_on:
+      - mqtt
   shell:
     build: .
     command: /bin/bash
