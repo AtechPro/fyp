@@ -33,14 +33,12 @@ def edit_user(id):
         user.name = request.form['name']
         
         # Check if the user being edited is the current admin
-        if current_user.id == user.id and int(request.form['role']) != current_user.role:
+        if current_user.userid == user.userid and int(request.form['role']) != current_user.role:
             flash("You cannot change your own role while logged in.", 'error') #will use javascript or npm
-            return redirect(url_for('usermanage.edit_user', id=id))
+            return redirect(url_for('usermanage.edit_user', userid=id))
 
-        # Update the user's role if not demoting themselves
         user.role = int(request.form['role'])  
         
-        # Commit changes to the database
         db.session.commit()
         flash("User updated successfully.")
         return redirect(url_for('usermanage.list_users'))

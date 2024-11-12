@@ -25,7 +25,6 @@ class Report(db.Model):
     report_title = db.Column(db.Text, nullable=False)
     report_desc = db.Column(db.Text, nullable=True)
     time = db.Column(db.DateTime, default=db.func.current_timestamp())
-
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
 
 # Other CRUD 
