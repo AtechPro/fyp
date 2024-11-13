@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Feedback</title>
+    <link rel="stylesheet" href="../static/feedback.css">
+</head>
+
+<body>
+    <nav class="sidebar">
+        {% include 'navigation/nav.html' %}
+    </nav>
+
+    <div class="container">
+        <h1>Your Feedback</h1>
+        
+        <!-- Display list of user feedback -->
+        {% if feedbacks %}
+            <table class="feedback-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Submitted On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feedback in feedbacks %}
+                    <tr>
+                        <td>{{ feedback.feedback_title }}</td>
+                        <td>{{ feedback.feedback_desc }}</td>
+                        <td>{{ feedback.time }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>You have not submitted any feedback yet.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

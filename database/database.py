@@ -17,15 +17,16 @@ class User(db.Model, UserMixin):
     def is_admin(self):
         return self.role == 1
 
-class Report(db.Model):
-    __tablename__ = 'reports'
-    report_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+    feedback_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
     username = db.Column(db.String(20), nullable=False)
-    report_title = db.Column(db.Text, nullable=False)
-    report_desc = db.Column(db.Text, nullable=True)
+    feedback_title = db.Column(db.Text, nullable=False)
+    feedback_desc = db.Column(db.Text, nullable=True)
     time = db.Column(db.DateTime, default=db.func.current_timestamp())
-    user = db.relationship('User', backref=db.backref('reports', lazy=True))
+    user = db.relationship('User', backref=db.backref('feedback', lazy=True))
+
 
 # Other CRUD 
 """

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Feedback</title>
+    <link rel="stylesheet" href="../static/feedback.css">
+</head>
+<body>
+    <h1>Submitted Feedback</h1>
+    
+    {% if feedbacks | length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Date Submitted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feedback in feedbacks %}
+                    <tr>
+                        <td>{{ feedback.username }}</td>
+                        <td>{{ feedback.feedback_title }}</td>
+                        <td>{{ feedback.feedback_desc }}</td>
+                        <td>{{ feedback.time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No feedback has been submitted yet.</p>
+    {% endif %}
+
+    <a href="{{ url_for('feedback.submit_feedback') }}">Back to Feedback Submission</a>
+</body>
+</html>

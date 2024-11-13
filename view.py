@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, login_required, logout_user
-from database.database import db, User, Report  # Import User and db
+from database.database import db, User, Feedback  # Import User and db
 
 views = Blueprint('views', __name__)
 
