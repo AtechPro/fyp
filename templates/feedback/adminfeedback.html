@@ -13,7 +13,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>Username</th>
                     <th>Title</th>
                     <th>Description</th>
                     <th>Date Submitted</th>
@@ -22,7 +21,6 @@
             <tbody>
                 {% for feedback in feedbacks %}
                     <tr>
-                        <td>{{ feedback.username }}</td>
                         <td>{{ feedback.feedback_title }}</td>
                         <td>{{ feedback.feedback_desc }}</td>
                         <td>{{ feedback.time.strftime('%Y-%m-%d %H:%M:%S') }}</td>

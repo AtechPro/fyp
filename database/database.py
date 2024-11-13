@@ -21,7 +21,6 @@ class Feedback(db.Model):
     __tablename__ = 'feedback'
     feedback_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    username = db.Column(db.String(20), nullable=False)
     feedback_title = db.Column(db.Text, nullable=False)
     feedback_desc = db.Column(db.Text, nullable=True)
     time = db.Column(db.DateTime, default=db.func.current_timestamp())

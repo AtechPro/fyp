@@ -4,7 +4,7 @@ from database.database import db, User, Feedback
 
 feedbackbp = Blueprint('feedback', __name__, template_folder='templates')
 
-@feedbackbp.route('/feedback', methods=['GET', 'POST'])
+@feedbackbp.route('/feedbacks', methods=['GET', 'POST'])
 @login_required
 def submit_feedback():  
     if request.method == 'POST':
@@ -17,7 +17,6 @@ def submit_feedback():
 
         new_feedback = Feedback(
             userid=current_user.userid,
-            username=current_user.username,
             feedback_title=feedback_title,
             feedback_desc=feedback_desc
         )
@@ -30,7 +29,7 @@ def submit_feedback():
     return render_template('feedback/feedback.html')
 
 
-@feedbackbp.route('/admin/feedbacks', methods=['GET'])
+@feedbackbp.route('/feedbacks/admin', methods=['GET'])
 @login_required
 def view_admin_feedbacks():
     if current_user.role != 1:  # Assuming role 1 is for admin
@@ -40,7 +39,7 @@ def view_admin_feedbacks():
     feedbacks = Feedback.query.all()  
     return render_template('feedback/adminfeedback.html', feedbacks=feedbacks)
 
-@feedbackbp.route('/user/feedbacks', methods=['GET'])
+@feedbackbp.route('/feedbacks/user', methods=['GET'])
 @login_required
 def view_user_feedbacks():
     user_feedbacks = Feedback.query.filter_by(userid=current_user.userid).all()
