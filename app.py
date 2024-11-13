@@ -1,5 +1,5 @@
 from flask import Flask
-from database.database import db, User #need to mention the class one by one
+from database.database import db, User 
 from view import views
 from templates.mqtt_testing.mqttdebug import mqtt_testing
 from templates.usermanage.usermanage import usermanage
@@ -46,10 +46,9 @@ def create_initial_user(app):
             print("Admin user already exists.")
 
 
-
 @login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(User, int(user_id))
+def load_user(userid):
+    return db.session.get(User, int(userid))
 
 if __name__ == '__main__':
     with app.app_context():

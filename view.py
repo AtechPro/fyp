@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from flask_login import login_user, login_required, logout_user, current_user
+from flask_login import login_user, login_required, logout_user
 from database.database import db, User, Report  # Import User and db
 
 views = Blueprint('views', __name__)
@@ -21,7 +21,6 @@ def login():
             session.permanent = True  # Make the session permanent
             return redirect(url_for('views.home'))
         else:
-            flash('Invalid username or password')
             return redirect(url_for('views.login'))
 
     return render_template('loginmodule/login.html')
@@ -42,8 +41,6 @@ def register():
         new_user = User(username=username, name=name, role=role, password=password)
         db.session.add(new_user)
         db.session.commit()
-
-        flash('Registration successful')
         return redirect(url_for('views.login'))
 
     return render_template('loginmodule/register.html')

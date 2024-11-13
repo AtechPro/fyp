@@ -40,3 +40,9 @@ def view_admin_reports():
 
     reports = Report.query.all()  
     return render_template('report/adminreport.html', reports=reports)
+
+@report_module.route('/user/reports', methods=['GET'])
+@login_required
+def view_user_reports():
+    user_reports = Report.query.filter_by(userid=current_user.userid).all()
+    return render_template('report/userreport.html', reports=user_reports)
