@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="../static/feedback.css">
 </head>
 <body>
+    <nav class="sidebar">
+        {% include 'navigation/nav.html' %}
+    </nav>
     <h1>Submitted Feedback</h1>
     
     {% if feedbacks | length > 0 %}

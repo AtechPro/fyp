@@ -1,8 +1,16 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from flask_login import login_user, login_required, logout_user
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, Flask
+from flask_login import login_user, login_required, logout_user, LoginManager
 from database.database import db, User, Feedback  # Import User and db
 
 views = Blueprint('views', __name__)
+
+app = Flask(__name__)
+login_manager = LoginManager()
+login_manager.init_app(app)
+ 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 @views.route('/')
 @login_required
