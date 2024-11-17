@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Test - Read Message</title>
+
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: #333;
+            padding-top: 20px;
+            overflow-y: auto;
+            color: #fff;
+        }
+
+        .sidebar a {
+            color: #fff;
+            padding: 10px;
+            display: block;
+            text-decoration: none;
+        }
+
+        .sidebar a:hover {
+            background-color: #444;
+        }
+
+        /* Main content styling */
+        .main-content {
+            margin-left: 260px;
+            padding: 20px;
+        }
+
+        /* Optional: Basic container styling */
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        /* Media query for smaller screens */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                position: absolute;
+                z-index: 1000;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>MQTT Test - Read Message</h1>
+    
+    <!-- MQTT Broker Connection Form -->
+    <h2>Connect to MQTT Broker</h2>
+    <form method="get" action="{{ url_for('mqtt_test.check_connection') }}">
+        <label for="broker">Broker Address:</label>
+        <input type="text" id="broker" name="broker" placeholder="e.g. mqtt://broker.hivemq.com" required>
+        
+        <label for="port">Port:</label>
+        <input type="number" id="port" name="port" value="1883" required>
+        
+        <button type="submit">Connect to Broker</button>
+    </form>
+    
+    <!-- Form to input topic -->
+    <form method="get" action="{{ url_for('mqtt_test.mqtt_test2') }}">
+        <label for="topic">Topic:</label>
+        <input type="text" id="topic" name="topic" required>
+        <button type="submit">Get Message</button>
+    </form>
+
+    {% if topic %}
+        <h3>Messages for Topic: {{ topic }}</h3>
+        {% if message %}
+            <p>Message: {{ message }}</p>
+        {% else %}
+            <p>No message received for this topic yet.</p>
+        {% endif %}
+    {% endif %}
+
+    <br>
+    <a href="{{ url_for('mqtt_test.mqtt_test') }}">Back to MQTT Test</a>
+</body>
+</html>
