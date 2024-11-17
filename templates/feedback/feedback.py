@@ -36,11 +36,53 @@ def view_admin_feedbacks():
         flash('You do not have permission to access this page.', 'error')
         return redirect(url_for('feedback.submit_feedback'))  
 
-    feedbacks = Feedback.query.all()  
-    return render_template('feedback/adminfeedback.html', feedbacks=feedbacks)
+    admin_feedbacks = Feedback.query.all()  # Get all feedbacks from database
+    return render_template('feedback/adminfeedback.html', feedbacks=admin_feedbacks)
+
 
 @feedbackbp.route('/feedbacks/user', methods=['GET'])
 @login_required
 def view_user_feedbacks():
     user_feedbacks = Feedback.query.filter_by(userid=current_user.userid).all()
     return render_template('feedback/userfeedback.html', feedbacks=user_feedbacks)
+
+@feedbackbp.route('/feedbacks/edit/<int:feedback_id>', methods=['GET', 'POST'])
+@login_required
+def edit_feedback(feedback_id):
+    # Get the feedback by its ID
+    edit_feedback = Feedback.query.get_or_404(feedback_id)
+    
+    # Ensure the feedback belongs to the current user
+    if edit_feedback.userid != current_user.userid:
+        flash('You cannot edit feedback that does not belong to you.', 'error')
+        return redirect(url_for('feedback.view_user_feedbacks'))
+    
+    if request.method == 'POST':
+        # Update the feedback with the new comment from the form
+        edit_feedback.comment = request.form['comment']
+        
+        # Commit the changes to the database
+        db.session.commit()
+        
+        flash('Feedback updated successfully!', 'success')
+        return redirect(url_for('feedback.view_user_feedbacks'))  # Redirect back to the feedbacks page
+    
+    return render_template('feedback/edit_feedback.html', feedback=edit_feedback)
+
+@feedbackbp.route('/feedbacks/delete/<int:feedback_id>', methods=['POST'])
+@login_required
+def delete_feedback(feedback_id):
+    # Get the feedback by its ID
+    del_feedback = Feedback.query.get_or_404(feedback_id)
+    
+    # Ensure the feedback belongs to the current user
+    if del_feedback.userid != current_user.userid:
+        flash('You cannot delete feedback that does not belong to you.', 'error')
+        return redirect(url_for('feedback.view_user_feedbacks'))
+    
+    # Delete the feedback from the database
+    db.session.delete(del_feedback)
+    db.session.commit()
+    
+    flash('Feedback deleted successfully!', 'success')
+    return redirect(url_for('feedback.view_user_feedbacks'))  # Redirect back to the feedbacks page
