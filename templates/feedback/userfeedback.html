@@ -23,7 +23,6 @@
                         <th>Title</th>
                         <th>Description</th>
                         <th>Submitted On</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,6 +31,7 @@
                         <td>{{ feedback.feedback_title }}</td>
                         <td>{{ feedback.feedback_desc }}</td>
                         <td>{{ feedback.time }}</td>
+<<<<<<< HEAD
                         <td>
                             <!-- Edit Button -->
                             <a href="{{ url_for('feedback.edit_feedback', feedback_id=feedback.feedback_id) }}" class="btn btn-warning btn-sm">Edit</a>
@@ -42,6 +42,8 @@
                             </form>
                        
                         </td>
+=======
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
                     </tr>
                     {% endfor %}
                 </tbody>

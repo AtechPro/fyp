@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from flask import Blueprint, render_template, request, flash, jsonify, Flask, redirect, url_for
 from flask_login import login_required, LoginManager
 import paho.mqtt.client as mqtt
@@ -12,6 +13,12 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(user_id)
+=======
+from flask import Blueprint, render_template, request, flash, jsonify
+from flask_login import login_required
+import paho.mqtt.client as mqtt
+import time
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
 
 mqtt_testing = Blueprint('mqtt_test', __name__, template_folder='mqtt_testing')
 
@@ -21,6 +28,7 @@ MQTT_PORT = 1883
 
 mqtt_client = mqtt.Client()
 
+<<<<<<< HEAD
 # Global variable for storing received messages
 received_messages = {}
 # Global variable to queue flash messages from MQTT callback
@@ -29,6 +37,9 @@ mqtt_flash_messages = []
 # MQTT callback functions
 def on_connect(client, userdata, flags, rc):
     """Called when the client connects to the broker."""
+=======
+def on_connect(client, _, __, rc):
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
     if rc == 0:
         print("Connected to broker")
         mqtt_flash_messages.append(("Successfully connected to MQTT broker!", "success"))
@@ -36,16 +47,22 @@ def on_connect(client, userdata, flags, rc):
         print(f"Failed to connect, return code {rc}")
         mqtt_flash_messages.append((f"Failed to connect, return code {rc}", "danger"))
 
+<<<<<<< HEAD
 def on_message(client, userdata, message):
     """Called when a message is received on a subscribed topic."""
     global received_messages
     print(f"Received message on {message.topic}: {message.payload.decode()}")
     # Store the message in the dictionary with the topic as the key
     received_messages[message.topic] = message.payload.decode()
+=======
+def on_message(_, __, message):
+    print(f"Received message: {message.payload.decode()} on topic {message.topic}")
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
 
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
 
+<<<<<<< HEAD
 def connect_to_mqtt(broker_ip):
     """Establish connection to MQTT broker."""
     try:
@@ -78,16 +95,19 @@ def process_mqtt_flash_messages(response):
         mqtt_flash_messages.clear()  # Clear the messages after processing
     return response
 
+=======
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
 @mqtt_testing.route('/mqtt', methods=['GET', 'POST'])
 @login_required
 def mqtt_test():
-    global mqtt_client, received_messages
+    global mqtt_client
 
     if request.method == 'POST':
         broker_ip = request.form.get('broker_ip', DEFAULT_MQTT_BROKER)
-        publish_topic = request.form['topic']
+        topic = request.form['topic']
         message = request.form['message']
 
+<<<<<<< HEAD
         subscribe_topic = request.form.get('subscribe_topic', None)
 
         # Check if the broker is already connected
@@ -121,6 +141,25 @@ def mqtt_test2():
     message = received_messages.get(topic, None)  # Get the last received message for the topic
     
     return render_template('mqtt_testing/mqtt_test2.html', topic=topic, message=message)
+=======
+        # Connect to specified broker IP
+        mqtt_client.connect(broker_ip, MQTT_PORT, 60)
+
+        # Publish a message to the custom topic
+        result = mqtt_client.publish(topic, message)
+        if result[0] == 0:
+            flash('Message sent successfully!', 'success')
+        else:
+            flash('Failed to send message.', 'error')
+
+    # Run the MQTT loop in a non-blocking way
+    mqtt_client.loop_start()
+    time.sleep(1)
+    mqtt_client.loop_stop()
+
+    return render_template('mqtt_testing/mqtt_test1.html')
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
+
 
 
 @mqtt_testing.route('/mqtt_test/check_connection', methods=['GET'])
@@ -135,6 +174,7 @@ def check_connection():
         flash("Successfully connected to the MQTT broker!", "success")
     except Exception as e:
         print(f"Connection failed: {e}")
+<<<<<<< HEAD
         flash(f"Connection failed: {e}", "danger")
         return redirect(url_for('mqtt_test.mqtt_test2'))
 
@@ -146,3 +186,7 @@ def check_connection():
 @mqtt_testing.teardown_app_request
 def shutdown_mqtt_client(_=None):
     mqtt_client.disconnect()
+=======
+        connected = False
+    return jsonify({"connected": connected})
+>>>>>>> parent of e77ccd2 (login manager each link  pt1)
