@@ -1,7 +1,6 @@
 from flask import Flask
 from database.database import db, User 
 from view import views
-from templates.mqtt_testing.mqttdebug import mqtt_testing
 from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
 from flask_login import LoginManager
@@ -17,8 +16,6 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
 app.register_blueprint(views) 
 app.register_blueprint(usermanage)
 app.register_blueprint(feedbackbp)
-app.register_blueprint(mqtt_testing)
-
 
 # Initialize the database
 db.init_app(app)
