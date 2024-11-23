@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Feedback</title>
-    <link rel="stylesheet" href="../static/feedback.css">
+    <link rel="stylesheet" href="feedback.css">
 </head>
 
 <body>
@@ -31,7 +31,6 @@
                         <td>{{ feedback.feedback_title }}</td>
                         <td>{{ feedback.feedback_desc }}</td>
                         <td>{{ feedback.time }}</td>
-<<<<<<< HEAD
                         <td>
                             <!-- Edit Button -->
                             <a href="{{ url_for('feedback.edit_feedback', feedback_id=feedback.feedback_id) }}" class="btn btn-warning btn-sm">Edit</a>
@@ -42,8 +41,6 @@
                             </form>
                        
                         </td>
-=======
->>>>>>> parent of e77ccd2 (login manager each link  pt1)
                     </tr>
                     {% endfor %}
                 </tbody>
