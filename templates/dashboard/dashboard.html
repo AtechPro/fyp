@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style src="/static/dashboard/dashboard.css"></style>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Device Dashboard</h1>
+    <div class="dashboard-container">
+        <!-- Tiles Section -->
+        <div class="tiles-container" id="tiles-container">
+            <!-- Device tiles will be dynamically added here -->
+        </div>
+    
+        <!-- Charts Section -->
+        <div class="chart-wrapper">
+            <canvas id="temperatureChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="humidityChart"></canvas>
+        </div>
+        
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="/static/dashboard/fetchmqtt.js"></script>
+</body>
+</html>
