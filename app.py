@@ -3,6 +3,7 @@ from database.database import db, User
 from view import views
 from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
+from mqtthandle import mqttbp
 from flask_login import LoginManager
 from datetime import timedelta
 app = Flask(__name__)
@@ -16,7 +17,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
 app.register_blueprint(views) 
 app.register_blueprint(usermanage)
 app.register_blueprint(feedbackbp)
-
+app.register_blueprint(mqttbp)
 # Initialize the database
 db.init_app(app)
 

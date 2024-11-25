@@ -1,103 +1,68 @@
 from flask import Blueprint, render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
-from database.database import db, User 
+from database.database import db
+
+# Device Management Blueprint
+devicebp = Blueprint('device', __name__)
 
 
-usermanage = Blueprint('usermanage', __name__, template_folder='templates')
+devices = {}  
 
-
-@usermanage.route('/users', methods=['GET'])
+# Route: View All Devices
+@devicebp.route('/devices', methods=['GET'])
 @login_required
-def list_users():
-  
-    if not current_user.is_admin():
-        flash("Access denied. Admins only.")
-        return redirect(url_for('views.home'))
-
-    users = User.query.all()
-    return render_template('usermanage/usermanage.html', users=users)
+def view_devices():
+    return render_template('device/devices.html', devices=devices)
 
 
-
-@usermanage.route('/users/edit/<int:id>', methods=['GET', 'POST'])
+# Route: Register a Device (Page + Action)
+@devicebp.route('/devices/register', methods=['GET', 'POST'])
 @login_required
-def edit_user(id):
-    if not current_user.is_admin():
-        flash("Access denied. Admins only.")
-        return redirect(url_for('index'))
-
-    user = User.query.get_or_404(id)
-
+def register_device():
     if request.method == 'POST':
-        user.username = request.form['username']
-        user.name = request.form['name']
-        
-        # Check if the user being edited is the current admin
-        if current_user.userid == user.userid and int(request.form['role']) != current_user.role:
-            flash("You cannot change your own role while logged in.", 'error') #will use javascript or npm
-            return redirect(url_for('usermanage.edit_user', userid=id))
+        device_id = request.form.get('device_id')
+        name = request.form.get('name')
 
-        user.role = int(request.form['role'])  
-        
-        db.session.commit()
-        flash("User updated successfully.")
-        return redirect(url_for('usermanage.list_users'))
+        if not device_id or not name:
+            flash("Device ID and Name are required.", "error")
+            return redirect(url_for('device.register_device'))
 
-    return render_template('usermanage/edit_user.html', user=user)
+        if device_id in devices:
+            flash(f"Device {device_id} is already registered.", "error")
+            return redirect(url_for('device.register_device'))
+
+        # Register the device
+        devices[device_id] = {"name": name, "status": "active"}
+
+        # Subscribe to the device's topics using the MQTT blueprint
+        mqtt_response = request.post(f"http://localhost:5000/mqtt/subscribe/{device_id}")
+        if mqtt_response.status_code != 200:
+            flash("Failed to subscribe to device topics.", "error")
+            devices.pop(device_id)  # Rollback
+            return redirect(url_for('device.register_device'))
+
+        flash(f"Device {name} ({device_id}) successfully registered.", "success")
+        return redirect(url_for('device.view_devices'))
+
+    return render_template('device/register_device.html')
 
 
-
-
-@usermanage.route('/delete_user/<int:userid>', methods=['POST'])
+# Route: Unregister a Device
+@devicebp.route('/devices/unregister/<device_id>', methods=['POST'])
 @login_required
-def delete_user(userid):
-    
-    if not current_user.is_admin():
-        flash("Access denied. Admins only.", 'error')
-        return redirect(url_for('usermanage.list_users'))
+def unregister_device(device_id):
+    if device_id not in devices:
+        flash(f"Device {device_id} not found.", "error")
+        return redirect(url_for('device.view_devices'))
 
-    if current_user.userid == userid:
-        flash("You cannot delete your own account while logged in.", 'error')
-        return redirect(url_for('usermanage.list_users'))
+    # Unregister the device
+    devices.pop(device_id)
 
-    user = User.query.get_or_404(userid)
-    try:
-        db.session.delete(user)
-        db.session.commit()
-        flash('User deleted successfully', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'An error occurred while trying to delete the user: {str(e)}', 'error')
+    # Unsubscribe from the device's topics using MQTT blueprint
+    mqtt_response = request.post(f"http://localhost:5000/mqtt/unsubscribe/{device_id}")
+    if mqtt_response.status_code != 200:
+        flash("Failed to unsubscribe from device topics.", "error")
+        return redirect(url_for('device.view_devices'))
 
-    return redirect(url_for('usermanage.list_users'))
-
-@usermanage.route('/add_user', methods=['GET', 'POST'])
-@login_required
-def add_user():
-    # Ensure that only admins can access this route
-    if not current_user.is_admin():
-        flash("Access denied. Admins only.")
-        return redirect(url_for('usermanage.list_users'))
-
-    if request.method == 'POST':
-        username = request.form['username']
-        name = request.form['name']
-        password = request.form['password']
-        existing_user = User.query.filter_by(username=username).first()
-        
-        if existing_user:
-            flash('Username already exists')
-            return redirect(url_for('usermanage.add_user'))
-
-        role = int(request.form['role'])  
-
-        # Create new user
-        new_user = User(username=username, name=name, role=role, password=password)
-        db.session.add(new_user)
-        db.session.commit()
-
-        flash('New user added successfully')
-        return redirect(url_for('usermanage.list_users'))
-
-    return render_template('usermanage/usermanage.html')
-
+    flash(f"Device {device_id} successfully unregistered.", "success")
+    return redirect(url_for('device.view_devices'))
