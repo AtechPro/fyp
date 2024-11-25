@@ -3,7 +3,9 @@ from database.database import db, User
 from view import views
 from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
+from templates.devicemanage.devicemanage import devicemanage_bp
 from mqtthandle import mqttbp
+from templates.dashboard.dashboard import dashboardbp
 from flask_login import LoginManager
 from datetime import timedelta
 app = Flask(__name__)
@@ -18,6 +20,8 @@ app.register_blueprint(views)
 app.register_blueprint(usermanage)
 app.register_blueprint(feedbackbp)
 app.register_blueprint(mqttbp)
+app.register_blueprint(devicemanage_bp)
+app.register_blueprint(dashboardbp)
 # Initialize the database
 db.init_app(app)
 
