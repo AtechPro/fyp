@@ -4,7 +4,7 @@ from view import views
 from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
 from templates.devicemanage.devicemanage import devicemanage_bp
-from mqtthandle import mqttbp
+from mqtthandling.mqtthandle import mqttbp
 from templates.dashboard.dashboard import dashboardbp
 from flask_login import LoginManager
 from datetime import timedelta

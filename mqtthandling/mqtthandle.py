@@ -33,7 +33,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     topic = msg.topic
     payload = msg.payload.decode()
-    # print(f"Message received: {topic} - {payload}")
+    #print(f"Message received: {topic} - {payload}")
     received_messages.append({"topic": topic, "payload": payload})
 
 
@@ -49,18 +49,3 @@ mqtt_client.on_message = on_message
 
 init_mqtt_client()
 
-@mqttbp.route('/mqtt/subscribe', methods=['POST'])
-def subscribe_to_all_devices():
-    try:
-        mqtt_client.subscribe("home/#")
-        return jsonify({"message": "Subscribed to all topics under 'home/#'"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@mqttbp.route('/mqtt/unsubscribe', methods=['POST'])
-def unsubscribe_from_all():
-    try:
-        mqtt_client.unsubscribe("home/#")
-        return jsonify({"message": "Unsubscribed from all topics under 'home/#'"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500

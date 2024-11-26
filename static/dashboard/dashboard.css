@@ -1,45 +1,104 @@
-.dashboard-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding: 20px;
-}
-
-.tile {
-    border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
     background-color: #f9f9f9;
 }
 
-.chart-container {
-    width: 100%;
-    max-width: 500px; /* Reduced maximum width for smaller charts */
-    margin: auto;
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;  /* Reserve 250px for the navbar */
+    height: 100%;
+    background-color: #333;
+    color: #fff;
+    padding: 20px;
 }
 
-#chart-container {
-    width: 45%; /* Reduce overall container width */
-    height: 250px; /* Decrease height for smaller charts */
-    position: relative;
-    overflow: hidden; /* Prevent overflow effects */
+/* Dashboard Container */
+.dashboard-container {
+    margin-left: 250px; /* Reserved space for the navbar */
+    display: flex;
+    flex-direction: column; /* Stack content vertically */
+    align-items: center;      /* Horizontally center the content */
+    padding: 20px;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+/* Dashboard Title */
+.dashboard-title {
+    color: #333;
+    font-size: 24px;  /* Adjust font size for the title */
+    margin-bottom: 20px;  /* Space between title and grid */
+    text-align: center; /* Center the title text */
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-gap: 25px;
+    width: 100%;  /* Make sure the grid takes full width */
+}
+
+/* Dashboard Tile */
+.dashboard-tile {
     background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;  /* Set a minimum height for the tiles */
 }
 
-canvas {
+/* Tile Header */
+.tile-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+/* Tile Content */
+.tile-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.tile-content canvas {
+    max-width: 100%;
+    max-height: 350px;
+}
+
+.tile-content p {
+    font-size: 14px;
+    margin: 5px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     width: 100%;
-    height: 250px; /* Adjusted height for consistency */
+    text-align: center;
 }
 
-.chart-wrapper {
-    width: 250px; /* Smaller width for the wrapper */
-    height: 180px; /* Smaller height for the wrapper */
-    margin: 20px auto; /* Center the graphs */
+/* Add Tile Button */
+.add-tile-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-canvas {
-    max-width: 100%; /* Ensure the chart fits its container */
-    max-height: 100%;
-    transition: transform 0.3s ease-out;
+.add-tile-button:hover {
+    background-color: #45a049;
 }
