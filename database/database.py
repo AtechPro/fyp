@@ -68,14 +68,6 @@ class ZoneManagement(db.Model):
     user = db.relationship('User', backref=db.backref('zones', lazy=True))
 
 
-class DashboardWidget(db.Model):
-    __tablename__ = 'dashboard_widgets'
-    widget_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    widget_name = db.Column(db.String(50), nullable=False)
-    widget_data = db.Column(db.Text, nullable=False)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    user = db.relationship('User', backref=db.backref('widgets', lazy=True))
-
 
 class Device(db.Model):
     __tablename__ = 'devices'

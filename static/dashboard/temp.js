@@ -1,4 +1,4 @@
-import { createChart, updateChart } from './chart.js';
+import { createChart, updateChart } from './sensorchart.js';
 
 const temperatureData = { labels: [], values: [] };
 

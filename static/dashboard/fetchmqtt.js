@@ -3,22 +3,33 @@ import { updateHumidityChart } from './humidity.js';
 
 async function fetchMessages() {
     try {
-        const response = await fetch('/mqtt/messages');
-        const messages = await response.json();
+        const response = await fetch('/mqtt/devices');
+        const deviceMessages = await response.json();
 
-        messages.forEach(msg => {
-            const data = JSON.parse(msg.payload);
+        // Iterate through each device
+        for (const [deviceId, deviceData] of Object.entries(deviceMessages)) {
+            // Focus on sensor messages for each device
+            const sensorMessages = deviceData.sensors;
 
-            updateTemperatureChart(data.temperature);
-            updateHumidityChart(data.humidity);
-            document.getElementById('temperatureValue').textContent = data.temperature.toFixed(2);  // Display temperature with 2 decimal places
-            document.getElementById('humidityValue').textContent = data.humidity.toFixed(2);  // Display humidity with 2 decimal places
-
-        });
+            // Process each sensor message
+            sensorMessages.forEach(data => {
+                // Check if temperature and humidity exist before processing
+                if (data.temperature !== undefined && data.humidity !== undefined) {
+                    updateTemperatureChart(data.temperature);
+                    updateHumidityChart(data.humidity);
+                    
+                    // Update display elements
+                    document.getElementById('temperatureValue').textContent = data.temperature.toFixed(2);
+                    document.getElementById('humidityValue').textContent = data.humidity.toFixed(2);
+                    
+                }
+            });
+        }
     } catch (error) {
         console.error('Error fetching messages:', error);
     }
 }
 
+// Initial fetch and then periodic updates
 setInterval(fetchMessages, 3000);
 fetchMessages();

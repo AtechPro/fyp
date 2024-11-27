@@ -6,20 +6,17 @@
     <title>Login</title>
     <link rel="stylesheet" href="/static/login.css">
 </head>
-
-<script>
-    const urlParams = new URLSearchParams(window.location.search);
-                const error = urlParams.get('error');
-            
-                if (error === 'invalid_credentials') {
-                    alert('Invalid username or password.');
-                }
-    </script>    
 <body>
-
     <div class="login-container">
         <h2>Login</h2>
-        <form action="/login" method="POST">
+        
+        {% if error %}
+        <div class="error-message" style="display: block;">
+            Incorrect username or password
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/login">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required>
 
@@ -27,12 +24,52 @@
             <input type="password" id="password" name="password" required>
 
             <button type="submit">Login</button>
-            <p>New user? <a href="/register">Register here</a></p>
         </form>
+
+        <div class="signup-link">
+            New user? <a href="/register">Register here</a>
+        </div>
     </div>
-
-
-        
-
 </body>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const loginForm = document.getElementById('login-form');
+        const errorContainer = document.getElementById('error-container');
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Check for login error in URL parameter
+        if (urlParams.get('error') === 'true') {
+            errorContainer.style.display = 'block';
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    // Successful login, redirect to dashboard or home page
+                    window.location.href = '/dashboard';
+                } else {
+                    // Show error message
+                    errorContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorContainer.style.display = 'block';
+            }
+        });
+    });
+</script>
 </html>

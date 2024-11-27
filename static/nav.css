@@ -3,14 +3,16 @@ body {
 }
 
 .sidebar {
-    height: 100vh; /* Full height for sidebar */
-    width: 250px; /* Fixed width for sidebar */
-    background-color: #333; /* Same background color */
-    position: fixed; /* Fixes sidebar in place */
-    top: 0; /* Aligns to the top */
-    left: 0; /* Aligns to the left */
-    padding-top: 20px; /* Space at the top */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;  /* Reserve 250px for the navbar */
+    height: 100%;
+    background-color: #333;
+    color: #fff;
+    padding: 20px;
 }
+
 
 .navbar-links {
     list-style-type: none; /* Removes bullets from list */
