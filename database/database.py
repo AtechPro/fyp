@@ -26,56 +26,25 @@ class Feedback(db.Model):
     time = db.Column(db.DateTime, default=db.func.current_timestamp())
     user = db.relationship('User', backref=db.backref('feedback', lazy=True))
 
-
-# Other CRUD 
-"""
-
-class BackupRestore(db.Model):
-    __tablename__ = 'backup_restore'
-    backup_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    backup_name = db.Column(db.String(50), nullable=False)
-    backup_time = db.Column(db.DateTime, default=db.func.current_timestamp())
-    user = db.relationship('User', backref=db.backref('backups', lazy=True))
-
-
-class AutomationRule(db.Model):
-    __tablename__ = 'automation_rules'
-    rule_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    rule_name = db.Column(db.String(50), nullable=False)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    rule_condition = db.Column(db.Text, nullable=False)
-    action = db.Column(db.Text, nullable=False)
-    user = db.relationship('User', backref=db.backref('automation_rules', lazy=True))
-
-
-class TimerScheduler(db.Model):
-    __tablename__ = 'timer_scheduler'
-    timer_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    timer_name = db.Column(db.String(50), nullable=False)
-    schedule_time = db.Column(db.DateTime, nullable=False)
-    action = db.Column(db.Text, nullable=False)
-    user = db.relationship('User', backref=db.backref('timers', lazy=True))
-
-
-class ZoneManagement(db.Model):
-    __tablename__ = 'zone_management'
-    zone_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    zone_name = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    user = db.relationship('User', backref=db.backref('zones', lazy=True))
-
-
-
 class Device(db.Model):
     __tablename__ = 'devices'
-    device_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    mac = db.Column(db.String(17), nullable=False, unique=True)
-    ip = db.Column(db.String(15), nullable=False, unique=True)
+    device_id = db.Column(db.String(50), primary_key=True) 
+    ip_address = db.Column(db.String(15), nullable=False)  
+    status = db.Column(db.String(10), default="offline")  
+    last_seen = db.Column(db.DateTime, nullable=True)  
+    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=True)  
+
+    # Establish a relationship to the User model
     user = db.relationship('User', backref=db.backref('devices', lazy=True))
 
+class Sensor(db.Model):
+    __tablename__ = 'sensors'
+    sensor_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    sensor_type = db.Column(db.String(50), nullable=False)  
+    sensor_name = db.Column(db.String(50), nullable=True)  
+    status = db.Column(db.String(10), default="offline")  
+    last_seen = db.Column(db.DateTime, nullable=True)  
+    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)
 
-"""
+    # Relationship to Device
+    device = db.relationship('Device', backref=db.backref('sensors', lazy=True))

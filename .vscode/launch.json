@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "type": "chrome",
+            "name": "localhost:5000/mqtt/messages",
+            "request": "launch",
+            "url": "localhost:5000/mqtt/messages"
+        }
+    ]
+}
