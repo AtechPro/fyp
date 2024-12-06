@@ -6,11 +6,11 @@ from database.database import db, User  # Importing database and User model
 dashboardbp = Blueprint('dashboard', __name__)
 
 @dashboardbp.route('/dashboard')
-@login_required  # Ensures that only logged-in users can access this route
+@login_required  
 def dashboard():
     # Fetch MQTT messages
     try:
-        response = requests.get('http://localhost:5000/mqtt/messages')  # Adjust the URL if necessary
+        response = requests.get('http://localhost:5000/mqtt/messages') 
         messages = response.json()
     except Exception as e:
         messages = []

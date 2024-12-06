@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Feedback</title>
-    <link rel="stylesheet" href="../static/feedback.css">
+    <link rel="stylesheet" href="/static/usermanage.css">
 </head>
 <body>
     <h1>Submitted Feedback</h1>
@@ -25,6 +25,12 @@
                         <td>{{ feedback.feedback_title }}</td>
                         <td>{{ feedback.feedback_desc }}</td>
                         <td>{{ feedback.time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <!-- Form for deleting feedback -->
+                            <form action="{{ url_for('feedback.delete_admin_feedback', feedback_id=feedback.feedback_id) }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this feedback?');">Delete</button>
+                            </form>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

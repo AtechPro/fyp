@@ -39,6 +39,40 @@ def view_admin_feedbacks():
     admin_feedbacks = Feedback.query.all()  # Get all feedbacks from database
     return render_template('feedback/adminfeedback.html', feedbacks=admin_feedbacks)
 
+@feedbackbp.route('/feedbacks/admin/edit/<int:feedback_id>', methods=['GET', 'POST'])
+@login_required
+def edit_admin_feedback(feedback_id):
+    if current_user.role != 1:  # Assuming role 1 is for admin
+        flash('You do not have permission to access this page.', 'error')
+        return redirect(url_for('feedback.submit_feedback'))  
+
+    feedback_to_edit = Feedback.query.get_or_404(feedback_id)
+
+    if request.method == 'POST':
+        feedback_to_edit.feedback_title = request.form['feedback_title']
+        feedback_to_edit.feedback_desc = request.form['feedback_desc']
+        db.session.commit()
+        flash('Feedback updated successfully!', 'success')
+        return redirect(url_for('feedback.view_admin_feedbacks')) 
+    
+    return render_template('feedback/edit_admin_feedback.html', feedback=feedback_to_edit)
+
+
+@feedbackbp.route('/feedbacks/admin/delete/<int:feedback_id>', methods=['POST'])
+@login_required
+def delete_admin_feedback(feedback_id):
+    if current_user.role != 1:  # Assuming role 1 is for admin
+        flash('You do not have permission to access this action.', 'error')
+        return redirect(url_for('feedback.submit_feedback'))  
+
+    feedback_to_delete = Feedback.query.get_or_404(feedback_id)
+    
+    db.session.delete(feedback_to_delete)
+    db.session.commit() 
+    
+    flash('Feedback deleted successfully!', 'success')
+    return redirect(url_for('feedback.view_admin_feedbacks'))
+
 
 @feedbackbp.route('/feedbacks/user', methods=['GET'])
 @login_required

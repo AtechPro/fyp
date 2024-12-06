@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submit Feedback</title>
+    <title>Feedback Management</title>
     <link rel="stylesheet" href="/static/feedback/feedback.css">
 </head>
-
 <body>
     <nav class="sidebar">
         {% include 'navigation/nav.html' %}
@@ -14,19 +13,33 @@
 
     <div class="content-container">
         <div class="feedback-form-container">
-            <h1>Submit Your Feedback</h1>
+            <h1>{% if is_admin %}Admin Feedback Management{% else %}Submit Your Feedback{% endif %}</h1>
 
-            <form method="POST" action="{{ url_for('feedback.submit_feedback') }}">
-                <div class="form-group">
-                    <label for="feedback_title">Feedback Title:</label>
-                    <textarea id="feedback_title" name="feedback_title" rows="2" cols="50" placeholder="Title" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="feedback_desc">Your Feedback:</label>
-                    <textarea id="feedback_desc" name="feedback_desc" rows="10" cols="50" placeholder="Enter your feedback here" required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Submit Feedback</button>
-            </form>
+            {% if is_admin %}
+                <form method="POST" action="{{ url_for('feedback.submit_feedback') }}">
+                    <div class="form-group">
+                        <label for="admin_feedback_title">Feedback Title:</label>
+                        <textarea id="admin_feedback_title" name="feedback_title" rows="2" cols="50" placeholder="Title" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin_feedback_desc">Admin Feedback:</label>
+                        <textarea id="admin_feedback_desc" name="feedback_desc" rows="10" cols="50" placeholder="Enter your feedback here" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Admin Feedback</button>
+                </form>
+            {% else %}
+                <form method="POST" action="{{ url_for('feedback.submit_feedback') }}">
+                    <div class="form-group">
+                        <label for="feedback_title">Feedback Title:</label>
+                        <textarea id="feedback_title" name="feedback_title" rows="2" cols="50" placeholder="Title" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback_desc">Your Feedback:</label>
+                        <textarea id="feedback_desc" name="feedback_desc" rows="10" cols="50" placeholder="Enter your feedback here" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                </form>
+            {% endif %}
         </div>
     </div>
 </body>

@@ -14,20 +14,23 @@
     <main class="dashboard-container">
         <h1 class="dashboard-title">Device Dashboard</h1>
 
+        <div class="add-tile-form">
+            <select id="sensorTypeSelect">
+                <option value="temperature">Temperature</option>
+                <option value="humidity">Humidity</option>
+                <option value="reed_switch">Reed Switch</option>
+                <option value="photo_interrupter">Photo Interrupter</option>
+                <option value="relay">Relay</option>
+            </select>
+            <button id="addTileButton">Add Tile</button>
+        </div>
+
         <div class="dashboard-grid">
-
-
+            <!-- Sensor tiles will be dynamically added here -->
         </div>
     </main>
 
-    
+    <script src="/static/extlibjs/chart.js"></script>
+    <script src="/static/dashboard/fetchmqtt.js"></script>
 </body>
-
-<!--
-
-
--->
-<script src="/static/extlibjs/chart.js"></script>
-<script src="/static/dashboard/fetchmqtt.js"></script>
-
 </html>

@@ -214,26 +214,26 @@ class DataManager {
 
     extractSensorData(sensorType, payload) {
         let sensorData = null;
-    
+
         switch(sensorType) {
             case 'temperature':
             case 'humidity':
                 // For temperature and humidity, just use the value field
                 sensorData = payload.value || payload;
                 break;
-    
+
             case 'reed_switch':
             case 'photo_interrupter':
             case 'relay':
                 // For reed_switch, photo_interrupter, and relay, check for state
                 sensorData = payload.state || payload;
                 break;
-    
+
             default:
                 console.warn(`Unknown sensor type: ${sensorType}`);
                 break;
         }
-    
+
         console.log(`Extracted data for ${sensorType}:`, sensorData); // Log for debugging
         return sensorData;
     }
@@ -265,6 +265,7 @@ class DashboardManager {
 
         this.initializeDashboard();
         this.startMessagePolling();
+        this.setupAddTileFunctionality(); // New method for adding tiles
     }
 
     initializeDashboardContainer() {
@@ -272,7 +273,7 @@ class DashboardManager {
         if (!container) {
             container = document.createElement('div');
             container.classList.add('dashboard-grid');
-            const dashboardContainer = document.querySelector('.dashboard-container');
+ const dashboardContainer = document.querySelector('.dashboard-container');
             if (dashboardContainer) {
                 dashboardContainer.appendChild(container);
             } else {
@@ -292,6 +293,16 @@ class DashboardManager {
             const deviceId = 'Device01'; // Replace with actual device ID retrieval
             this.dataManager.fetchMessages(deviceId);
         }, this.pollingInterval);
+    }
+
+    // New method to set up functionality for adding tiles
+    setupAddTileFunctionality() {
+        const addTileButton = document.getElementById('addTileButton');
+        addTileButton.addEventListener('click', () => {
+            const sensorTypeSelect = document.getElementById('sensorTypeSelect');
+            const selectedSensorType = sensorTypeSelect.value;
+            this.tileRenderer.createSingleTile(selectedSensorType); // Add the selected tile
+        });
     }
 }
 

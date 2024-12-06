@@ -16,11 +16,12 @@ def login():
         password = request.form['password']
         found_user = User.query.filter_by(username=username).first()
 
-        if found_user and found_user.password == password:
+        if found_user and found_user.password == password:  # Consider using hashed passwords
             login_user(found_user)
             session.permanent = True  # Make the session permanent
             return redirect(url_for('views.home'))
         else:
+            flash('Incorrect username or password. Please try again.', 'error')  # Flash error message
             return redirect(url_for('views.login'))
 
     return render_template('loginmodule/login.html')

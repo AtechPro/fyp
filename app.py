@@ -3,7 +3,7 @@ from database.database import db, User
 from view import views
 from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
-# from templates.devicemanage.devicemanage import devicemgmt_bp
+from templates.devicemanage.devicemanage import devicebp
 from mqtthandling.mqtthandle import mqttbp
 from mqtthandling.relay import relaybp
 from templates.dashboard.dashboard import dashboardbp
@@ -22,7 +22,7 @@ app.register_blueprint(usermanage)
 app.register_blueprint(feedbackbp)
 app.register_blueprint(mqttbp)
 app.register_blueprint(relaybp)
-# app.register_blueprint(devicemgmt_bp)
+app.register_blueprint(devicebp)
 app.register_blueprint(dashboardbp)
 
 # Initialize the database
