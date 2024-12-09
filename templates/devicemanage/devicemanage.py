@@ -1,143 +1,94 @@
-import requests
-from flask import Blueprint, jsonify, request
-from datetime import datetime
-from database.database import db, Device, Sensor
+from flask import Blueprint, jsonify, request, render_template
+import paho.mqtt.client as mqtt
+from datetime import datetime, timedelta
+import json
 
-# Create Blueprint
-devicebp = Blueprint('devicemanage', __name__)
+# Flask Blueprint
+devicemanage_bp = Blueprint('devicemanage', __name__)
 
-### Configuration ###
-MQTT_URL = "http://localhost:5000/mqtt/messages"
+# MQTT Configuration
+BROKER_ADDRESS = "atechpromqtt"
+BROKER_PORT = 1883
+MQTT_TOPIC = "home/#"
+DEVICE_TIMEOUT_SECONDS = 10  # Mark device as offline if no updates within this time
 
-### Helper Functions ###
+# MQTT Client
+mqtt_client = mqtt.Client()
 
-# Fetch data from MQTT endpoint
-def fetch_mqtt_data():
+# In-memory storage for devices and sensors
+devices = {}
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to MQTT broker.")
+        client.subscribe(MQTT_TOPIC)
+    else:
+        print(f"Failed to connect to MQTT broker with return code {rc}")
+
+def on_message(client, userdata, msg):
     try:
-        response = requests.get(MQTT_URL)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to fetch MQTT data. Status code: {response.status_code}")
-            return {}
-    except Exception as e:
-        print(f"Error fetching MQTT data: {e}")
-        return {}
+        payload = json.loads(msg.payload.decode())
+        device_id = payload.get("deviceId")
+        ip_address = payload.get("ip")
 
-# Add or update a device in the database
-def add_or_update_device(device_id, ip_address, user_id=None):
-    device = Device.query.filter_by(device_id=device_id).first()
-    if not device:
-        device = Device(
-            device_id=device_id,
-            ip_address=ip_address,
-            status="online",
-            last_seen=datetime.now(),
-            userid=user_id
-        )
-        db.session.add(device)
-    else:
-        device.ip_address = ip_address
-        device.status = "online"
-        device.last_seen = datetime.now()
-    db.session.commit()
+        if not device_id or not ip_address:
+            print("Invalid MQTT message: missing deviceId or IP address.")
+            return
 
-# Add or update a sensor in the database
-def add_or_update_sensor(device_id, sensor_type, sensor_name=None):
-    sensor = Sensor.query.filter_by(device_id=device_id, sensor_type=sensor_type).first()
-    if not sensor:
-        sensor = Sensor(
-            device_id=device_id,
-            sensor_type=sensor_type,
-            sensor_name=sensor_name or sensor_type,
-            status="online",
-            last_seen=datetime.now()
-        )
-        db.session.add(sensor)
-    else:
-        sensor.status = "online"
-        sensor.last_seen = datetime.now()
-    db.session.commit()
-
-### Routes ###
-
-# Fetch all devices and their sensors
-@devicebp.route('/devices', methods=['GET', 'POST'])
-def get_devices():
-    devices = Device.query.all()
-    device_list = []
-    for device in devices:
-        sensors = [
-            {
-                "sensor_type": sensor.sensor_type,
-                "sensor_name": sensor.sensor_name,
-                "status": sensor.status,
-                "last_seen": sensor.last_seen
+        # Update or create device in memory
+        if device_id not in devices:
+            devices[device_id] = {
+                "ip_address": ip_address,
+                "status": "online",
+                "last_seen": datetime.now().isoformat(),
+                "sensors": {}
             }
-            for sensor in device.sensors
-        ]
-        device_list.append({
-            "device_id": device.device_id,
-            "ip_address": device.ip_address,
-            "status": device.status,
-            "last_seen": device.last_seen,
-            "userid": device.userid,
-            "sensors": sensors
-        })
-    return jsonify(device_list)
+        else:
+            devices[device_id]["last_seen"] = datetime.now().isoformat()
+            devices[device_id]["status"] = "online"
 
-# Add or update a device
-@devicebp.route('/devices', methods=['POST'])
-def save_device():
-    data = request.json
-    device_id = data.get('device_id')
-    ip_address = data.get('ip_address', 'unknown')
-    user_id = data.get('userid')  # Optional user ID for ownership
+        # Update or add sensors
+        for key, value in payload.items():
+            if key not in ["deviceId", "ip"]:
+                devices[device_id]["sensors"][key] = {
+                    "value": value,
+                    "status": "online",
+                    "last_seen": datetime.now().isoformat()
+                }
 
-    if not device_id:
-        return jsonify({"error": "Device ID is required"}), 400
+    except Exception as e:
+        print(f"Error processing MQTT message: {e}")
 
-    # Fetch data from MQTT
-    mqtt_data = fetch_mqtt_data()
-    if device_id not in mqtt_data:
-        return jsonify({"error": f"No data available for device {device_id}"}), 404
+# Check device timeout and mark as offline
+def check_device_status():
+    now = datetime.now()
+    for device_id, device_info in devices.items():
+        last_seen = datetime.fromisoformat(device_info["last_seen"])
+        if (now - last_seen) > timedelta(seconds=DEVICE_TIMEOUT_SECONDS):
+            devices[device_id]["status"] = "offline"
 
-    add_or_update_device(device_id, ip_address, user_id)
-    return jsonify({"message": "Device added or updated successfully"}), 201
+# Flask route to return devices with timeout checks applied
+@devicemanage_bp.route('/devices', methods=['GET'])
+def get_devices():
+    check_device_status()  # Update statuses before returning
+    return jsonify(devices)
 
-# Add or update a sensor
-@devicebp.route('/sensors', methods=['POST'])
-def save_sensor():
-    data = request.json
-    device_id = data.get('device_id')
-    sensor_type = data.get('sensor_type')
-    sensor_name = data.get('sensor_name')
+# Initialize MQTT Client
+def init_mqtt_client():
+    try:
+        mqtt_client.on_connect = on_connect
+        mqtt_client.on_message = on_message
+        mqtt_client.connect(BROKER_ADDRESS, BROKER_PORT)
+        mqtt_client.loop_start()
+        print(f"Connecting to MQTT broker at {BROKER_ADDRESS}:{BROKER_PORT}")
+    except Exception as e:
+        print(f"Error connecting to MQTT broker: {e}")
 
-    if not device_id or not sensor_type:
-        return jsonify({"error": "Device ID and Sensor Type are required"}), 400
 
-    # Fetch data from MQTT
-    mqtt_data = fetch_mqtt_data()
-    if device_id not in mqtt_data or sensor_type not in mqtt_data[device_id]:
-        return jsonify({"error": f"No data available for device {device_id} and sensor {sensor_type}"}), 404
+@devicemanage_bp.route('/devicemanage', methods=['GET'])
+def show_device_management():
+    return render_template('devicemanage/devicemanage.html')
 
-    add_or_update_sensor(device_id, sensor_type, sensor_name)
-    return jsonify({"message": "Sensor added or updated successfully"}), 201
 
-# Fetch sensors for a specific device
-@devicebp.route('/devices/<device_id>/sensors', methods=['GET'])
-def get_device_sensors(device_id):
-    device = Device.query.filter_by(device_id=device_id).first()
-    if not device:
-        return jsonify({"error": f"Device {device_id} not found"}), 404
-
-    sensors = [
-        {
-            "sensor_type": sensor.sensor_type,
-            "sensor_name": sensor.sensor_name,
-            "status": sensor.status,
-            "last_seen": sensor.last_seen
-        }
-        for sensor in device.sensors
-    ]
-    return jsonify({"device_id": device.device_id, "sensors": sensors})
+# Initialize MQTT Client
+init_mqtt_client()
