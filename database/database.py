@@ -28,23 +28,35 @@ class Feedback(db.Model):
 
 class Device(db.Model):
     __tablename__ = 'devices'
-    device_id = db.Column(db.String(50), primary_key=True) 
-    ip_address = db.Column(db.String(15), nullable=False)  
-    status = db.Column(db.String(10), default="offline")  
-    last_seen = db.Column(db.DateTime, nullable=True)  
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=True)  
 
-    # Establish a relationship to the User model
-    user = db.relationship('User', backref=db.backref('devices', lazy=True))
+    # Attributes
+    device_id = db.Column(db.String(50), primary_key=True)  # Unique device identifier
+    ip_address = db.Column(db.String(15), nullable=False)  # Device IP
+    status = db.Column(db.String(10), default="offline")  # Device status (online/offline)
+    last_seen = db.Column(db.DateTime, nullable=True)  # Last time device reported
+    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=True)  # Foreign key to User
+
+    # Relationships
+    user = db.relationship('User', backref=db.backref('devices', lazy=True))  # Link to the User model
+    sensors = db.relationship('Sensor', backref='device', lazy=True)  # Link to associated sensors
+
+    def __repr__(self):
+        return f"<Device {self.device_id}, Status: {self.status}, Last Seen: {self.last_seen}>"
 
 class Sensor(db.Model):
     __tablename__ = 'sensors'
-    sensor_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    sensor_type = db.Column(db.String(50), nullable=False)  
-    sensor_name = db.Column(db.String(50), nullable=True)  
-    status = db.Column(db.String(10), default="offline")  
-    last_seen = db.Column(db.DateTime, nullable=True)  
-    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)
 
-    # Relationship to Device
-    device = db.relationship('Device', backref=db.backref('sensors', lazy=True))
+    # Attributes
+    sensor_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # Unique sensor identifier
+    sensor_type = db.Column(db.String(50), nullable=False)  # Type of sensor (e.g., temperature, humidity)
+    sensor_name = db.Column(db.String(50), nullable=True)  # User-defined name for the sensor
+    status = db.Column(db.String(10), default="offline")  # Sensor status
+    last_seen = db.Column(db.DateTime, nullable=True)  # Last time sensor reported
+    value = db.Column(db.String(255), nullable=True)  # Optional: Store the last reported value
+
+    # Relationships
+    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)  # Link to a device
+
+    def __repr__(self):
+        return f"<Sensor {self.sensor_id}, Type: {self.sensor_type}, Device: {self.device_id}>"
+

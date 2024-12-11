@@ -2,8 +2,7 @@ import logging
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
 import paho.mqtt.client as mqtt
-import json
-import time
+import json, time
 from database.database import db, User
 
 # Configure logging

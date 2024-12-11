@@ -22,6 +22,9 @@ app.register_blueprint(feedbackbp)
 app.register_blueprint(devicemanage_bp)
 app.register_blueprint(dashboardbp)
 
+#initialized socketio
+# socketio.init_app(app)
+
 # Initialize the database
 db.init_app(app)
 

@@ -3,30 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/devicemanage/devicemanage.css">
     <title>Device Management</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .device {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .sensor {
-            margin-left: 20px;
-        }
-        .online {
-            color: green;
-        }
-        .offline {
-            color: red;
-        }
-    </style>
 </head>
 <body>
-    <h1>Device Management</h1>
-    <div id="device-container"></div>
+    <nav class="sidebar">
+        {% include 'navigation/nav.html' %}
+    </nav>
+
+    <main>
+        <h1>Device Management</h1>
+        <div id="device-container"></div>
+    </main>
 
     <script src="/static/devicemanage/devicemanage.js"></script>
 </body>
