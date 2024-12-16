@@ -1,62 +1,110 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const deviceContainer = document.getElementById("device-container");
+function updateDevices() {
+    fetch('/devices')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('deviceTableBody');
+            tbody.innerHTML = '';
 
-    // Function to fetch and update devices
-    function fetchAndUpdateDevices() {
-        fetch('/devices')
-            .then(response => response.json())
-            .then(data => {
-                displayDevices(data);
-            })
-            .catch(error => console.error('Error fetching devices:', error));
-    }
+            data.forEach(device => {
+                const tr = document.createElement('tr');
 
-    function displayDevices(devices) {
-        deviceContainer.innerHTML = ""; // Clear container
+                // Device ID
+                const deviceIdCell = document.createElement('td');
+                deviceIdCell.textContent = device.device_id;
+                tr.appendChild(deviceIdCell);
 
-        if (Object.keys(devices).length === 0) {
-            deviceContainer.innerHTML = "<p>No devices found.</p>";
-            return;
-        }
+                // Status
+                const statusCell = document.createElement('td');
+                const statusText = device.status === 'online' ? 'Online' : 'Offline';
+                const statusColor = device.status === 'online' ? 'green' : 'red';
+                statusCell.innerHTML = `<span style="color: ${statusColor};">${statusText}</span>`;
+                tr.appendChild(statusCell);
 
-        // Iterate through each device
-        for (const [deviceId, deviceInfo] of Object.entries(devices)) {
-            const deviceDiv = document.createElement("div");
-            deviceDiv.className = "device";
+                // Last Seen
+                const lastSeenCell = document.createElement('td');
+                lastSeenCell.textContent = device.last_seen
+                    ? new Date(device.last_seen).toLocaleString()
+                    : 'N/A';
+                tr.appendChild(lastSeenCell);
 
-            const statusClass = deviceInfo.status === "online" ? "online" : "offline";
-            const lastSeen = new Date(deviceInfo.last_seen).toLocaleString();
+                // Paired Status
+                const pairedCell = document.createElement('td');
+                const pairedText = device.paired ? 'Paired' : 'Not Paired';
+                pairedCell.innerHTML = `<span>${pairedText}</span>`;
+                tr.appendChild(pairedCell);
 
-            // Generate device card
-            deviceDiv.innerHTML = `
-                <h3>${deviceId} <span class="${statusClass}">(${deviceInfo.status})</span></h3>
-                <p>IP Address: ${deviceInfo.ip_address}</p>
-                <p>Last Seen: ${lastSeen}</p>
-                <h4>Sensors:</h4>
-                <ul class="sensors"></ul>
-            `;
+                // Actions
+                const actionsCell = document.createElement('td');
 
-            const sensorsList = deviceDiv.querySelector(".sensors");
-            const sensors = deviceInfo.sensors;
-
-            if (Object.keys(sensors).length === 0) {
-                sensorsList.innerHTML = "<li>No sensors detected.</li>";
-            } else {
-                // Add sensor types only
-                for (const sensorName of Object.keys(sensors)) {
-                    const sensorItem = document.createElement("li");
-                    sensorItem.textContent = sensorName; // Only display sensor type
-                    sensorsList.appendChild(sensorItem);
+                // Pair Button (only if not paired)
+                if (!device.paired) {
+                    const pairButton = document.createElement('button');
+                    pairButton.textContent = 'Pair';
+                    pairButton.onclick = () => pairDeviceFromTable(device.device_id);
+                    actionsCell.appendChild(pairButton);
                 }
+
+                // Remove Button
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remove';
+                removeButton.style.marginLeft = '10px';
+                removeButton.onclick = () => removeDevice(device.device_id);
+                actionsCell.appendChild(removeButton);
+
+                tr.appendChild(actionsCell);
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching devices:', error);
+            alert('Failed to fetch device list. Try again.');
+        });
+}
+
+// Pair a device directly from the table
+function pairDeviceFromTable(deviceId) {
+    fetch('/add_device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceId })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Error: ${data.error}`);
+            } else {
+                alert(data.message);
+                updateDevices();
             }
+        })
+        .catch(error => {
+            console.error('Error pairing device:', error);
+            alert('Failed to pair the device.');
+        });
+}
 
-            deviceContainer.appendChild(deviceDiv);
-        }
-    }
+// Remove a device
+function removeDevice(deviceId) {
+    fetch(`/delete_device/${deviceId}`, {
+        method: 'DELETE'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Error: ${data.error}`);
+            } else {
+                alert(data.message);
+                updateDevices();
+            }
+        })
+        .catch(error => {
+            console.error('Error removing device:', error);
+            alert('Failed to remove the device.');
+        });
+}
 
-    // Initial fetch and update
-    fetchAndUpdateDevices();
+// Periodically update the device list
+setInterval(updateDevices, 5000);
 
-    // Set interval to fetch and update every 3 seconds
-    setInterval(fetchAndUpdateDevices, 3000);
-});
+// Initial load
+window.onload = updateDevices;

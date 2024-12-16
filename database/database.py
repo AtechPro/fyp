@@ -31,17 +31,18 @@ class Device(db.Model):
 
     # Attributes
     device_id = db.Column(db.String(50), primary_key=True)  # Unique device identifier
-    ip_address = db.Column(db.String(15), nullable=False)  # Device IP
-    status = db.Column(db.String(10), default="offline")  # Device status (online/offline)
-    last_seen = db.Column(db.DateTime, nullable=True)  # Last time device reported
+    status = db.Column(db.Boolean, default=False)  # False = Unpaired, True = Paired
     userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=True)  # Foreign key to User
+    last_seen = db.Column(db.DateTime, nullable=True)  # Timestamp for the last communication
 
     # Relationships
     user = db.relationship('User', backref=db.backref('devices', lazy=True))  # Link to the User model
     sensors = db.relationship('Sensor', backref='device', lazy=True)  # Link to associated sensors
 
     def __repr__(self):
-        return f"<Device {self.device_id}, Status: {self.status}, Last Seen: {self.last_seen}>"
+        return f"<Device {self.device_id}, Paired: {self.status}, Last Seen: {self.last_seen}>"
+
+
 
 class Sensor(db.Model):
     __tablename__ = 'sensors'
