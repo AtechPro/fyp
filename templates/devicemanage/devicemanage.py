@@ -187,23 +187,31 @@ def add_device():
     db.session.commit()
     return jsonify({"message": "Device and sensors added successfully"}), 201
 
-# Similar modifications for pair_device route
-
-
-
-
 
 @devicemanage_bp.route('/delete_device/<device_id>', methods=['DELETE'])
 def delete_device(device_id):
-    """API to delete a device."""
+    """API to delete a device and its associated sensors."""
+    # Find the device
     device = Device.query.filter_by(device_id=device_id).first()
 
     if not device:
         return jsonify({"error": "Device not found"}), 404
 
-    db.session.delete(device)
-    db.session.commit()
-    return jsonify({"message": "Device deleted successfully"}), 200
+    try:
+        # Delete associated sensors first
+        sensors = Sensor.query.filter_by(device_id=device_id).all()
+        for sensor in sensors:
+            db.session.delete(sensor)
+
+        # Delete the device itself
+        db.session.delete(device)
+        db.session.commit()
+
+        return jsonify({"message": "Device and sensors deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()  # Rollback transaction in case of an error
+        return jsonify({"error": f"Failed to delete device: {str(e)}"}), 500
+
 
 # Initialize MQTT client and start communication
 init_mqtt_client()
