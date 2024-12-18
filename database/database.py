@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -13,7 +14,7 @@ class User(db.Model, UserMixin):
 
     def get_id(self):
         return str(self.userid)
-    
+
     def is_admin(self):
         return self.role == 1
 
@@ -26,38 +27,43 @@ class Feedback(db.Model):
     time = db.Column(db.DateTime, default=db.func.current_timestamp())
     user = db.relationship('User', backref=db.backref('feedback', lazy=True))
 
-class Device(db.Model):
-    __tablename__ = 'devices'
-
-    # Attributes
-    device_id = db.Column(db.String(50), primary_key=True)  # Unique device identifier
-    status = db.Column(db.Boolean, default=False)  # False = Unpaired, True = Paired
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=True)  # Foreign key to User
-    last_seen = db.Column(db.DateTime, nullable=True)  # Timestamp for the last communication
-
-    # Relationships
-    user = db.relationship('User', backref=db.backref('devices', lazy=True))  # Link to the User model
-    sensors = db.relationship('Sensor', backref='device', lazy=True)  # Link to associated sensors
-
-    def __repr__(self):
-        return f"<Device {self.device_id}, Paired: {self.status}, Last Seen: {self.last_seen}>"
-
-
 
 class Sensor(db.Model):
     __tablename__ = 'sensors'
 
-    # Attributes
-    sensor_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # Unique sensor identifier
-    sensor_type = db.Column(db.String(50), nullable=False)  # Type of sensor (e.g., temperature, humidity)
-    sensor_name = db.Column(db.String(50), nullable=True)  # User-defined name for the sensor
-    status = db.Column(db.String(10), default="offline")  # Sensor status
-    last_seen = db.Column(db.DateTime, nullable=True)  # Last time sensor reported
-    value = db.Column(db.String(255), nullable=True)  # Optional: Store the last reported value
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)
+    sensor_key = db.Column(db.String(50), nullable=False)
+    sensor_type = db.Column(db.String(50), nullable=False)
+    value = db.Column(db.String(100), nullable=True)
+    status = db.Column(db.String(20), default='online')
+    last_seen = db.Column(db.DateTime, default=datetime.now)
 
-    # Relationships
-    device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id'), nullable=False)  # Link to a device
+    # Relationship with Device
+    device = db.relationship('Device', backref=db.backref('sensor_list', lazy=True))
 
     def __repr__(self):
-        return f"<Sensor {self.sensor_id}, Type: {self.sensor_type}, Device: {self.device_id}>"
+        return f"<Sensor {self.sensor_key} of Device {self.device_id}>"
 
+# Modify the Device model
+class Device(db.Model):
+    __tablename__ = 'devices'
+
+    device_id = db.Column(db.String(50), primary_key=True)
+    status = db.Column(db.Boolean, default=False)
+    userid = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=True)
+    last_seen = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('devices', lazy=True))
+
+    def add_sensor(self, sensor_key, sensor_type, value=None, status="online"):
+        """Helper method to add a sensor to the device."""
+        new_sensor = Sensor(
+            device_id=self.device_id,
+            sensor_key=sensor_key,
+            sensor_type=sensor_type,
+            value=str(value),
+            status=status,
+            last_seen=datetime.now()
+        )
+        db.session.add(new_sensor)

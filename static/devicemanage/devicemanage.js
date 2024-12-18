@@ -1,9 +1,10 @@
+// Function to update the devices table
 function updateDevices() {
-    fetch('/devices')
+    fetch('/device')
         .then(response => response.json())
         .then(data => {
             const tbody = document.getElementById('deviceTableBody');
-            tbody.innerHTML = '';
+            tbody.innerHTML = '';  // Clear existing table rows
 
             data.forEach(device => {
                 const tr = document.createElement('tr');
@@ -33,6 +34,26 @@ function updateDevices() {
                 pairedCell.innerHTML = `<span>${pairedText}</span>`;
                 tr.appendChild(pairedCell);
 
+                // Sensors
+                const sensorCell = document.createElement('td');
+                if (device.sensors && Object.keys(device.sensors).length > 0) {
+                    const sensorList = document.createElement('ul');
+                    sensorList.style.paddingLeft = '20px';
+                    sensorList.style.margin = '0';
+
+                    // Populate sensor keys
+                    Object.keys(device.sensors).forEach(sensorKey => {
+                        const sensorItem = document.createElement('li');
+                        sensorItem.textContent = sensorKey;
+                        sensorList.appendChild(sensorItem);
+                    });
+
+                    sensorCell.appendChild(sensorList);
+                } else {
+                    sensorCell.textContent = 'No Sensors';
+                }
+                tr.appendChild(sensorCell);
+
                 // Actions
                 const actionsCell = document.createElement('td');
 
@@ -61,7 +82,7 @@ function updateDevices() {
         });
 }
 
-// Pair a device directly from the table
+// Existing functions remain the same
 function pairDeviceFromTable(deviceId) {
     fetch('/add_device', {
         method: 'POST',
@@ -74,7 +95,7 @@ function pairDeviceFromTable(deviceId) {
                 alert(`Error: ${data.error}`);
             } else {
                 alert(data.message);
-                updateDevices();
+                updateDevices();  // Update the device table after pairing
             }
         })
         .catch(error => {
@@ -83,7 +104,6 @@ function pairDeviceFromTable(deviceId) {
         });
 }
 
-// Remove a device
 function removeDevice(deviceId) {
     fetch(`/delete_device/${deviceId}`, {
         method: 'DELETE'
@@ -94,7 +114,7 @@ function removeDevice(deviceId) {
                 alert(`Error: ${data.error}`);
             } else {
                 alert(data.message);
-                updateDevices();
+                updateDevices();  // Update the device table after removal
             }
         })
         .catch(error => {
@@ -103,8 +123,8 @@ function removeDevice(deviceId) {
         });
 }
 
-// Periodically update the device list
+// Periodically update the device list every 5 seconds
 setInterval(updateDevices, 5000);
 
-// Initial load
+// Initial load of devices when the page is loaded
 window.onload = updateDevices;
