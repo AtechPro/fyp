@@ -1,68 +1,67 @@
-// Function to update the devices table
+// Function to update the devices tile view
+// Function to update the devices tile view
 function updateDevices() {
     fetch('/device')
         .then(response => response.json())
         .then(data => {
-            const tbody = document.getElementById('deviceTableBody');
-            tbody.innerHTML = '';  // Clear existing table rows
+            const container = document.getElementById('deviceTilesContainer');
+            container.innerHTML = '';  // Clear existing tiles
 
             data.forEach(device => {
-                const tr = document.createElement('tr');
+                const tile = document.createElement('div');
+                tile.classList.add('device-tile');
 
                 // Device ID
-                const deviceIdCell = document.createElement('td');
-                deviceIdCell.textContent = device.device_id;
-                tr.appendChild(deviceIdCell);
+                const deviceIdElement = document.createElement('div');
+                deviceIdElement.classList.add('device-id');
+                deviceIdElement.textContent = device.device_id;
+                tile.appendChild(deviceIdElement);
 
                 // Status
-                const statusCell = document.createElement('td');
-                const statusText = device.status === 'online' ? 'Online' : 'Offline';
-                const statusColor = device.status === 'online' ? 'green' : 'red';
-                statusCell.innerHTML = `<span style="color: ${statusColor};">${statusText}</span>`;
-                tr.appendChild(statusCell);
+                const statusElement = document.createElement('div');
+                statusElement.classList.add('status');
+                // Add 'offline' class only if the device is offline
+                if (device.status !== 'online') {
+                    statusElement.classList.add('offline');
+                }
+                statusElement.textContent = device.status === 'online' ? 'Online' : 'Offline';
+                tile.appendChild(statusElement);
 
                 // Last Seen
-                const lastSeenCell = document.createElement('td');
-                lastSeenCell.textContent = device.last_seen
-                    ? new Date(device.last_seen).toLocaleString()
-                    : 'N/A';
-                tr.appendChild(lastSeenCell);
+                const lastSeenElement = document.createElement('div');
+                lastSeenElement.textContent = device.last_seen ? new Date(device.last_seen).toLocaleString() : 'N/A';
+                tile.appendChild(lastSeenElement);
 
                 // Paired Status
-                const pairedCell = document.createElement('td');
-                const pairedText = device.paired ? 'Paired' : 'Not Paired';
-                pairedCell.innerHTML = `<span>${pairedText}</span>`;
-                tr.appendChild(pairedCell);
+                const pairedElement = document.createElement('div');
+                pairedElement.textContent = device.paired ? 'Paired' : 'Not Paired';
+                tile.appendChild(pairedElement);
 
                 // Sensors
-                const sensorCell = document.createElement('td');
+                const sensorElement = document.createElement('div');
                 if (device.sensors && Object.keys(device.sensors).length > 0) {
                     const sensorList = document.createElement('ul');
-                    sensorList.style.paddingLeft = '20px';
-                    sensorList.style.margin = '0';
-
-                    // Populate sensor keys
+                    sensorList.classList.add('sensor-list');
                     Object.keys(device.sensors).forEach(sensorKey => {
                         const sensorItem = document.createElement('li');
                         sensorItem.textContent = sensorKey;
                         sensorList.appendChild(sensorItem);
                     });
-
-                    sensorCell.appendChild(sensorList);
+                    sensorElement.appendChild(sensorList);
                 } else {
-                    sensorCell.textContent = 'No Sensors';
+                    sensorElement.textContent = 'No Sensors';
                 }
-                tr.appendChild(sensorCell);
+                tile.appendChild(sensorElement);
 
                 // Actions
-                const actionsCell = document.createElement('td');
+                const actionsContainer = document.createElement('div');
 
                 // Pair Button (only if not paired)
                 if (!device.paired) {
                     const pairButton = document.createElement('button');
                     pairButton.textContent = 'Pair';
-                    pairButton.onclick = () => pairDeviceFromTable(device.device_id);
-                    actionsCell.appendChild(pairButton);
+                    pairButton.onclick = () => pairDeviceFromTile(device.device_id);
+                    actionsContainer.appendChild(pairButton);
                 }
 
                 // Remove Button
@@ -70,10 +69,10 @@ function updateDevices() {
                 removeButton.textContent = 'Remove';
                 removeButton.style.marginLeft = '10px';
                 removeButton.onclick = () => removeDevice(device.device_id);
-                actionsCell.appendChild(removeButton);
+                actionsContainer.appendChild(removeButton);
 
-                tr.appendChild(actionsCell);
-                tbody.appendChild(tr);
+                tile.appendChild(actionsContainer);
+                container.appendChild(tile);
             });
         })
         .catch(error => {
@@ -82,8 +81,9 @@ function updateDevices() {
         });
 }
 
-// Existing functions remain the same
-function pairDeviceFromTable(deviceId) {
+
+// Pair Device from Tile (for tile action)
+function pairDeviceFromTile(deviceId) {
     fetch('/add_device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,7 +95,7 @@ function pairDeviceFromTable(deviceId) {
                 alert(`Error: ${data.error}`);
             } else {
                 alert(data.message);
-                updateDevices();  // Update the device table after pairing
+                updateDevices();  // Update the device tiles after pairing
             }
         })
         .catch(error => {
@@ -104,6 +104,7 @@ function pairDeviceFromTable(deviceId) {
         });
 }
 
+// Remove Device from Tile (for tile action)
 function removeDevice(deviceId) {
     fetch(`/delete_device/${deviceId}`, {
         method: 'DELETE'
@@ -114,7 +115,7 @@ function removeDevice(deviceId) {
                 alert(`Error: ${data.error}`);
             } else {
                 alert(data.message);
-                updateDevices();  // Update the device table after removal
+                updateDevices();  // Update the device tiles after removal
             }
         })
         .catch(error => {

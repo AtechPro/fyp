@@ -8,34 +8,17 @@
     <link rel="stylesheet" href="/static/devicemanage/devicemanage.css">
 </head>
 <body>
-    <!-- Sidebar -->
     <nav class="sidebar">
         {% include 'navigation/nav.html' %}
     </nav>
 
-    <!-- Main Content -->
     <div class="content">
         <header class="page-header">
             <h1>Device Management</h1>
         </header>
 
-        <!-- Device Table -->
-        <section class="device-table-container">
-            <table class="device-table">
-                <thead>
-                    <tr>
-                        <th>Device ID</th>
-                        <th>Online Status</th>
-                        <th>Last Seen</th>
-                        <th>Pair Status</th>
-                        <th>Sensors</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="deviceTableBody">
-                </tbody>
-            </table>
-            
+        <!-- Device Tiles -->
+        <section class="device-tiles-container" id="deviceTilesContainer">
         </section>
     </div>
 </body>

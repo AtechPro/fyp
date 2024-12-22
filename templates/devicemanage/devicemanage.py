@@ -165,8 +165,6 @@ def add_device():
                 return 'Humidity Sensor'
         
         return 'Unknown Sensor'
-
-    # Check if the device is in the in-memory devices dictionary
     if device_id in devices:
         device_info = devices[device_id]
         
@@ -212,6 +210,4 @@ def delete_device(device_id):
         db.session.rollback()  # Rollback transaction in case of an error
         return jsonify({"error": f"Failed to delete device: {str(e)}"}), 500
 
-
-# Initialize MQTT client and start communication
 init_mqtt_client()

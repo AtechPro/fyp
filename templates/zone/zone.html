@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zone Management</title>
+    <link rel="stylesheet" href="/static/zone/zone.css">
+</head>
+<body>
+    <h1>Zone Management</h1>
+
+    <!-- Create Zone Section -->
+    <div class="zone-management">
+        <div class="create-zone-section">
+            <h2>Create New Zone</h2>
+            <div class="form-group">
+                <input type="text" id="zone-name" placeholder="Zone Name" required>
+                <textarea id="zone-desc" placeholder="Zone Description"></textarea>
+                <select id="sensor-select" multiple>
+                    <!-- Will be populated with unassigned sensors -->
+                </select>
+                <button onclick="createZone()">Create Zone</button>
+            </div>
+            <div id="create-result"></div>
+        </div>
+    
+        <div class="zones-section">
+            <h2>Your Zones</h2>
+            <div id="zone-tiles-container">
+                <!-- Will be populated with zone tiles -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/zone/zone.js"></script>
+</body>
+</html>

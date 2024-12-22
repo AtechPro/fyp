@@ -5,6 +5,7 @@ from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
 from templates.dashboard.dashboard import dashboardbp
 from templates.devicemanage.devicemanage import devicemanage_bp
+from templates.zone.zone import zone_bp
 from flask_login import LoginManager
 from datetime import timedelta
 app = Flask(__name__)
@@ -21,9 +22,7 @@ app.register_blueprint(feedbackbp)
 
 app.register_blueprint(devicemanage_bp)
 app.register_blueprint(dashboardbp)
-
-#initialized socketio
-# socketio.init_app(app)
+app.register_blueprint(zone_bp)
 
 # Initialize the database
 db.init_app(app)
