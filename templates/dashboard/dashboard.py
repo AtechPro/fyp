@@ -3,16 +3,14 @@ from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
 import paho.mqtt.client as mqtt
 import json, time
-from database.database import db, User
+from database.database import db, User, Sensor
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 dashboardbp = Blueprint('dashboard', __name__)
 
-# MQTT Configuration
 BROKER_ADDRESS = "atechpromqtt"
 BROKER_PORT = 1883
 MAX_MESSAGE_AGE = 10
@@ -21,16 +19,16 @@ MQTT_TOPIC = "home/#"
 mqtt_client = mqtt.Client()
 last_known_state = {}
 
-# Sensor Configuration (matching client-side configuration)
 SENSOR_TYPES = {
-    'temperature': {'unit': '°C'},
-    'humidity': {'unit': '%'},
-    'reed_switch': {'type': 'status', 'states': ['OPEN', 'CLOSED']},
-    'photo_interrupter': {'type': 'status', 'states': ['CLEAR', 'BLOCKED']},
-    'relay': {'type': 'status', 'states': ['ON', 'OFF']}
+    'temperature': {'unit': '°C', 'type': 'Temperature Sensor'},
+    'humidity': {'unit': '%', 'type': 'Humidity Sensor'},
+    'reed_switch': {'type': 'Status Sensor', 'states': ['OPEN', 'CLOSED']},
+    'photo_interrupter': {'type': 'Status Sensor', 'states': ['CLEAR', 'BLOCKED']},
+    'relay': {'type': 'Status Sensor', 'states': ['ON', 'OFF']},
+    'pir': {'type': 'Motion Sensor', 'states': ['MOTION DETECTED', 'NO MOTION']},
+    'photoresistor': {'type': 'Analog Sensor', 'unit': 'Lux'},
 }
 
-# Initialize MQTT client
 def init_mqtt_client():
     try:
         mqtt_client.on_connect = on_connect
@@ -41,7 +39,6 @@ def init_mqtt_client():
     except Exception as e:
         logger.error(f"Error connecting to MQTT broker: {e}")
 
-# MQTT on_connect callback
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         logger.info("Successfully connected to MQTT broker")
@@ -49,109 +46,122 @@ def on_connect(client, userdata, flags, rc):
     else:
         logger.error(f"Failed to connect with return code {rc}")
 
-# MQTT on_message callback
 def on_message(client, userdata, msg):
-    try:
-        payload = json.loads(msg.payload.decode())
-        device_id = payload.get("deviceId", "Unknown")
-        
-        # Validate device ID format
-        if not device_id.startswith("Device"):
-            device_id = f"Device{device_id.zfill(2)}"
-        
-        last_known_state[device_id] = {
-            "data": payload,
-            "timestamp": time.time()
-        }
+    payload = json.loads(msg.payload.decode())
+    device_id = payload.get("deviceId", "Unknown")
+    if device_id not in last_known_state:
+        last_known_state[device_id] = {"data": {}}
+    for key, value in payload.items():
+        if key != "deviceId":
+            last_known_state[device_id]["data"][key] = value
 
-        # Log received data to check if temperature is included
-        logger.debug(f"Received message for device {device_id}: {json.dumps(payload)}")
-
-    except json.JSONDecodeError:
-        logger.warning(f"Invalid JSON payload received on topic {msg.topic}")
-    except Exception as e:
-        logger.error(f"Error processing MQTT message: {e}")
-
-
-# Dashboard route to render dashboard page
 @dashboardbp.route('/dashboard')
 @login_required
 def dashboard():
-    """
-    Render the dashboard template and provide MQTT messages.
-    """
     try:
         current_time = time.time()
-        # Filtering messages based on time threshold
         filtered_data = {
             device_id: details["data"]
             for device_id, details in last_known_state.items()
-            if current_time - details["timestamp"] <= MAX_MESSAGE_AGE
+            if current_time - details.get("timestamp", 0) <= MAX_MESSAGE_AGE
         }
         messages = filtered_data
     except Exception as e:
         logger.error(f"Error filtering dashboard messages: {e}")
         messages = {}
-
     user = User.query.filter_by(userid=current_user.userid).first()
     return render_template('dashboard/dashboard.html', messages=messages, user=user)
 
-# API route to fetch sensor data for a specific device and sensor type
-@dashboardbp.route('/dashboard/message/<device_id>/<sensor_type>', methods=['GET'])
-def get_sensor_data(device_id, sensor_type):
-    """
-    Get specific sensor data for a device.
-    """
+@dashboardbp.route('/dashboard/sensor/<device_id>/<sensor_key>', methods=['GET'])
+def get_combined_sensor_data(device_id, sensor_key):
     try:
-        # Validate sensor type
-        if sensor_type not in SENSOR_TYPES:
-            return jsonify({"error": f"Invalid sensor type: {sensor_type}"}), 400
-        
-        # Normalize device ID
         if not device_id.startswith("Device"):
             device_id = f"Device{device_id.zfill(2)}"
-        
-        # Retrieve device data from the last known state
+        if sensor_key not in SENSOR_TYPES:
+            return jsonify({
+                "error": f"Invalid sensor type: {sensor_key}",
+                "message": "This sensor type is not supported"
+            }), 400
+        sensor = Sensor.query.filter_by(device_id=device_id, sensor_key=sensor_key).first()
+        if not sensor:
+            return jsonify({
+                "error": f"Sensor {sensor_key} not found for device {device_id}",
+                "message": "This sensor is not registered in the database"
+            }), 404
         device_data = last_known_state.get(device_id, {}).get("data", {})
-        
-        # Check if the requested sensor type is available for the device
-        if sensor_type in device_data:
-            return jsonify({sensor_type: device_data[sensor_type]})
-        
-        # Handle missing sensor data
-        return jsonify({"error": f"{sensor_type} data not available for device {device_id}"}), 404
-    
+        response_data = {}
+        if sensor_key in device_data:
+            if sensor_key in ['reed_switch', 'photo_interrupter', 'pir']:
+                state = device_data[sensor_key]
+                if state not in SENSOR_TYPES[sensor_key].get('states', []):
+                    state = 'UNKNOWN'
+                response_data = {
+                    "sensor_key": sensor_key,
+                    "sensor_type": sensor_key,
+                    "value": state,
+                    "unit": "N/A",
+                    "source": "mqtt",
+                    "last_seen": "real-time"
+                }
+            else:
+                response_data = {
+                    "sensor_key": sensor_key,
+                    "sensor_type": sensor_key,
+                    "value": device_data[sensor_key],
+                    "unit": SENSOR_TYPES[sensor_key].get('unit', 'N/A'),
+                    "source": "mqtt",
+                    "last_seen": "real-time"
+                }
+        else:
+            if sensor:
+                if sensor_key in ['reed_switch', 'photo_interrupter', 'pir']:
+                    state = sensor.value
+                    if state not in SENSOR_TYPES[sensor_key].get('states', []):
+                        state = 'UNKNOWN'
+                    response_data = {
+                        "sensor_key": sensor.sensor_key,
+                        "sensor_type": sensor.sensor_type,
+                        "value": state,
+                        "unit": "N/A",
+                        "source": "database",
+                        "last_seen": sensor.last_seen
+                    }
+                else:
+                    response_data = {
+                        "sensor_key": sensor.sensor_key,
+                        "sensor_type": sensor.sensor_type,
+                        "value": sensor.value,
+                        "unit": SENSOR_TYPES.get(sensor.sensor_type, {}).get('unit', 'N/A'),
+                        "source": "database",
+                        "last_seen": sensor.last_seen
+                    }
+            else:
+                return jsonify({
+                    "error": f"Sensor {sensor_key} not found for device {device_id}",
+                    "message": "Data not available in real-time or database"
+                }), 404
+        return jsonify(response_data)
     except Exception as e:
-        logger.error(f"Error fetching sensor data: {e}")
-        return jsonify({"error": f"Internal server error: {e}"}), 500
-
-# Relay control route
-@dashboardbp.route('/relay/<device_id>/<relay_state>', methods=['GET'])
-def control_relay(device_id, relay_state):
-    """
-    Control relay for a specific device.
-    """
-    try:
-        # Validate relay state
-        if relay_state not in ['ON', 'OFF']:
-            return jsonify({"error": "Invalid relay state. Must be 'ON' or 'OFF'"}), 400
-        
-        # Normalize device ID
-        if not device_id.startswith("Device"):
-            device_id = f"Device{device_id.zfill(2)}"
-        
-        # Publish relay control message
-        relay_topic = f"home/{device_id}/relay/command"
-        logger.debug(f"Publishing to topic: {relay_topic}, message: {relay_state}")
-        mqtt_client.publish(relay_topic, relay_state)
-        
-        return jsonify({"message": f"Relay {relay_state} command sent to {device_id}"}), 200
-    
-    except Exception as e:
-        logger.error(f"Error controlling relay: {e}")
-        return jsonify({"error": f"Internal server error: {e}"}), 500
+        logger.error(f"Error in get_combined_sensor_data: {str(e)}")
+        return jsonify({
+            "error": "Failed to retrieve sensor data",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }), 500
 
 
+@dashboardbp.route('/dashboard/sensors')
+@login_required
+def get_sensors():
+    user = User.query.filter_by(userid=current_user.userid).first()
+    sensors = Sensor.query.filter_by(userid=user.userid).all()
+    sensor_list = [{
+        "sensor_id": sensor.id,
+        "sensor_type": sensor.sensor_type,
+        "value": sensor.value,
+        "status": sensor.status
+    } for sensor in sensors]
+    return jsonify(sensor_list)
 
-# Initialize MQTT connection when the module is imported
+
 init_mqtt_client()
+

@@ -15,6 +15,8 @@ class User(db.Model, UserMixin):
     # Relationship with Feedback and Device
     feedback = db.relationship('Feedback', cascade='all, delete-orphan', backref='user', lazy=True)
     devices = db.relationship('Device', cascade='all, delete-orphan', backref='user', lazy=True)
+    Sensor = db.relationship('Sensor', cascade='all, delete-orphan', backref='user', lazy=True)
+
 
     def get_id(self):
         return str(self.userid)
@@ -42,18 +44,22 @@ class Sensor(db.Model):
     value = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(20), default='online')
     last_seen = db.Column(db.DateTime, default=datetime.now)
+    userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=False)  # User foreign key
 
-    # Relationship with Device
+    # Relationships
     device = db.relationship('Device', backref=db.backref('sensor_list', cascade='all, delete-orphan', lazy=True))
 
     def __repr__(self):
         return f"<Sensor {self.sensor_key} of Device {self.device_id}>"
 
 
+
 class Device(db.Model):
     __tablename__ = 'devices'
 
     device_id = db.Column(db.String(50), primary_key=True)
+    title = db.Column(db.String(100), nullable=True)  # New field for device title
+    description = db.Column(db.Text, nullable=True)  # New field for device description
     status = db.Column(db.Boolean, default=False)
     userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=True)
     last_seen = db.Column(db.DateTime, nullable=True)
@@ -69,6 +75,10 @@ class Device(db.Model):
             last_seen=datetime.now()
         )
         db.session.add(new_sensor)
+
+    def __repr__(self):
+        return f"<Device {self.device_id} - {self.title}>" 
+    
 
 class Zone(db.Model):
     __tablename__ = 'zones'

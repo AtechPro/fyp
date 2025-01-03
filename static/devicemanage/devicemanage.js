@@ -1,5 +1,4 @@
-// Function to update the devices tile view
-// Function to update the devices tile view
+// Function to update the list of devices (called periodically)
 function updateDevices() {
     fetch('/device')
         .then(response => response.json())
@@ -11,6 +10,21 @@ function updateDevices() {
                 const tile = document.createElement('div');
                 tile.classList.add('device-tile');
 
+                // Only show Device Title and Description if paired
+                if (device.paired) {
+                    // Device Title
+                    const titleElement = document.createElement('div');
+                    titleElement.classList.add('device-title');
+                    titleElement.textContent = device.title || 'No Title';
+                    tile.appendChild(titleElement);
+
+                    // Device Description
+                    const descriptionElement = document.createElement('div');
+                    descriptionElement.classList.add('device-description');
+                    descriptionElement.textContent = device.description || 'No Description';
+                    tile.appendChild(descriptionElement);
+                }
+
                 // Device ID
                 const deviceIdElement = document.createElement('div');
                 deviceIdElement.classList.add('device-id');
@@ -20,9 +34,8 @@ function updateDevices() {
                 // Status
                 const statusElement = document.createElement('div');
                 statusElement.classList.add('status');
-                // Add 'offline' class only if the device is offline
                 if (device.status !== 'online') {
-                    statusElement.classList.add('offline');
+                    statusElement.classList.add('offline');  // Add 'offline' class
                 }
                 statusElement.textContent = device.status === 'online' ? 'Online' : 'Offline';
                 tile.appendChild(statusElement);
@@ -56,20 +69,26 @@ function updateDevices() {
                 // Actions
                 const actionsContainer = document.createElement('div');
 
-                // Pair Button (only if not paired)
-                if (!device.paired) {
+                if (device.paired) {
+                    // Edit Button
+                    const editButton = document.createElement('button');
+                    editButton.textContent = 'Edit';
+                    editButton.onclick = () => editDeviceFromTile(device.device_id);
+                    actionsContainer.appendChild(editButton);
+
+                    // Delete Button
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.style.marginLeft = '10px';
+                    deleteButton.onclick = () => removeDevice(device.device_id);
+                    actionsContainer.appendChild(deleteButton);
+                } else {
+                    // Pair Button
                     const pairButton = document.createElement('button');
                     pairButton.textContent = 'Pair';
                     pairButton.onclick = () => pairDeviceFromTile(device.device_id);
                     actionsContainer.appendChild(pairButton);
                 }
-
-                // Remove Button
-                const removeButton = document.createElement('button');
-                removeButton.textContent = 'Remove';
-                removeButton.style.marginLeft = '10px';
-                removeButton.onclick = () => removeDevice(device.device_id);
-                actionsContainer.appendChild(removeButton);
 
                 tile.appendChild(actionsContainer);
                 container.appendChild(tile);
@@ -84,10 +103,17 @@ function updateDevices() {
 
 // Pair Device from Tile (for tile action)
 function pairDeviceFromTile(deviceId) {
+    const title = prompt('Enter a title for the device:');
+    const description = prompt('Enter a description for the device:');
+
     fetch('/add_device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_id: deviceId })
+        body: JSON.stringify({
+            device_id: deviceId,
+            title: title,
+            description: description
+        })
     })
         .then(response => response.json())
         .then(data => {
@@ -122,6 +148,36 @@ function removeDevice(deviceId) {
             console.error('Error removing device:', error);
             alert('Failed to remove the device.');
         });
+}
+
+// Edit Device from Tile (for tile action)
+function editDeviceFromTile(deviceId) {
+    const newTitle = prompt('Enter new title for the device:');
+    const newDescription = prompt('Enter new description for the device:');
+    if (newTitle || newDescription) {
+        fetch('/edit_device', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                device_id: deviceId,
+                title: newTitle,
+                description: newDescription
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Error: ${data.error}`);
+                } else {
+                    alert(data.message);
+                    updateDevices();  // Update the device tiles after editing
+                }
+            })
+            .catch(error => {
+                console.error('Error editing device:', error);
+                alert('Failed to edit the device.');
+            });
+    }
 }
 
 // Periodically update the device list every 5 seconds

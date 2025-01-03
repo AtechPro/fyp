@@ -311,7 +311,7 @@ class DataManager {
         try {
             for (const sensorType of sensorTypes) {
                 const deviceForSensor = this.deviceMapping[sensorType];
-                const url = `/dashboard/message/${deviceForSensor}/${sensorType}`;
+                const url = `/dashboard/sensor/${deviceForSensor}/${sensorType}`;
 
                 try {
                     const response = await fetch(url);
@@ -324,7 +324,7 @@ class DataManager {
                     if (data.error) {
                         console.error(`Error from server for ${sensorType}: ${data.error}`);
                     } else {
-                        categorizedData[sensorType] = data[sensorType];
+                        categorizedData[sensorType] = data;
                     }
                 } catch (fetchError) {
                     console.error(`Fetch error for ${sensorType}:`, fetchError);
@@ -361,7 +361,7 @@ class DataManager {
             case 'reed_switch':
             case 'photo_interrupter':
             case 'relay':
-                return payload.state ?? payload;
+                return payload.status ?? payload;
             default:
                 console.warn(`Unknown sensor type: ${sensorType}`);
                 return null;

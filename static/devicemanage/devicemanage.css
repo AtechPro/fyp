@@ -6,10 +6,8 @@
     padding: 20px;
 }
 
-
-.content{
+.content {
     margin-left: 300px;
-    
 }
 
 .page-header {
@@ -32,11 +30,20 @@
     transform: scale(1.05);
 }
 
-.device-tile .device-id {
-    font-size: 1.2em;
+/* Title: Bold and slightly larger */
+.device-tile .device-title {
+    font-size: 1.5em;
     font-weight: bold;
 }
 
+/* Device ID: Normal size (no need to be big) */
+.device-tile .device-id {
+    font-size: 1em;
+    font-weight: normal;
+    margin-top: 5px;
+}
+
+/* Status: Green for online, red for offline */
 .device-tile .status {
     color: green;
 }
@@ -45,11 +52,13 @@
     color: red;
 }
 
+/* List of sensors */
 .device-tile .sensor-list {
     padding-left: 20px;
     margin: 10px 0;
 }
 
+/* Buttons inside the tile */
 .device-tile button {
     margin-top: 10px;
 }
