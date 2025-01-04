@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
-from database.database import db, Zone, ZoneSensor, Sensor
+from database.database import db, User, Zone, ZoneSensor, Sensor, SensorType
 
 zone_bp = Blueprint('zone', __name__)
 
@@ -15,10 +15,13 @@ def get_user_zones(user_id):
         for zs in zone.sensors:
             sensor = Sensor.query.get(zs.sensor_id)
             if sensor:
+                sensor_type = SensorType.query.get(sensor.sensor_type_id)
                 sensors.append({
                     "sensor_id": sensor.id,
                     "name": sensor.sensor_key,
-                    "type": sensor.sensor_type
+                    "type": sensor_type.type_key if sensor_type else "Unknown",
+                    "display_name": sensor_type.display_name if sensor_type else "Unknown",
+                    "unit": sensor_type.unit if sensor_type else None
                 })
         
         zones_data.append({
@@ -38,11 +41,22 @@ def get_unassigned_sensors(user_id):
     
     # Query for unassigned sensors
     unassigned = Sensor.query.filter(
-        ~Sensor.id.in_(assigned_sensor_ids)
+        ~Sensor.id.in_(assigned_sensor_ids),
+        Sensor.userid == user_id
     ).all()
     
-    return [{"sensor_id": s.id, "name": s.sensor_key, "type": s.sensor_type} 
-            for s in unassigned]
+    sensors_data = []
+    for sensor in unassigned:
+        sensor_type = SensorType.query.get(sensor.sensor_type_id)
+        sensors_data.append({
+            "sensor_id": sensor.id,
+            "name": sensor.sensor_key,
+            "type": sensor_type.type_key if sensor_type else "Unknown",
+            "display_name": sensor_type.display_name if sensor_type else "Unknown",
+            "unit": sensor_type.unit if sensor_type else None
+        })
+    
+    return sensors_data
 
 def create_new_zone(user_id, name, description, sensor_ids):
     """Create a new zone with the given sensors."""
@@ -63,8 +77,8 @@ def create_new_zone(user_id, name, description, sensor_ids):
         
         # Add sensors to zone
         for sensor_id in sensor_ids:
-            # Check if sensor exists
-            sensor = Sensor.query.get(sensor_id)
+            # Check if sensor exists and belongs to the user
+            sensor = Sensor.query.filter_by(id=sensor_id, userid=user_id).first()
             if not sensor:
                 continue
                 
@@ -121,7 +135,8 @@ def update_zone(user_id, zone_id, name, description, sensor_ids):
         
         # Add new sensor associations
         for sensor_id in sensor_ids:
-            sensor = Sensor.query.get(sensor_id)
+            # Check if sensor exists and belongs to the user
+            sensor = Sensor.query.filter_by(id=sensor_id, userid=user_id).first()
             if not sensor:
                 continue
                 
@@ -215,14 +230,19 @@ def debug_get_zones():
     response = []
 
     for zone in zones:
-        sensors = [
-            {
-                "sensor_id": zs.sensor.id,
-                "name": zs.sensor.sensor_key,
-                "type": zs.sensor.sensor_type
-            }
-            for zs in zone.sensors
-        ]
+        sensors = []
+        for zs in zone.sensors:
+            sensor = Sensor.query.get(zs.sensor_id)
+            if sensor:
+                sensor_type = SensorType.query.get(sensor.sensor_type_id)
+                sensors.append({
+                    "sensor_id": sensor.id,
+                    "name": sensor.sensor_key,
+                    "type": sensor_type.type_key if sensor_type else "Unknown",
+                    "display_name": sensor_type.display_name if sensor_type else "Unknown",
+                    "unit": sensor_type.unit if sensor_type else None
+                })
+        
         response.append({
             "zone_id": zone.id,
             "name": zone.name,
@@ -232,3 +252,50 @@ def debug_get_zones():
         })
 
     return jsonify(response), 200
+
+# Add this utility function
+def update_zone_details(user_id, zone_id, name, description):
+    """Update only the name and description of a zone."""
+    try:
+        # Check if zone exists and belongs to the user
+        zone = Zone.query.filter_by(id=zone_id, user_id=user_id).first()
+        if not zone:
+            return False, "Zone not found"
+        
+        # Check if the new name conflicts with existing zones
+        if name != zone.name:
+            existing = Zone.query.filter_by(user_id=user_id, name=name).first()
+            if existing:
+                return False, "Zone name already exists"
+        
+        # Update zone details
+        zone.name = name
+        zone.description = description
+        
+        db.session.commit()
+        return True, "Zone details updated successfully"
+        
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+# Add this route
+@zone_bp.route('/api/zone/<int:zone_id>/details', methods=['PUT'])
+@login_required
+def update_zone_details_route(zone_id):
+    """Update only the name and description of a zone."""
+    data = request.get_json()
+    
+    if not data or 'name' not in data:
+        return jsonify({"error": "Zone name is required"}), 400
+        
+    success, message = update_zone_details(
+        user_id=current_user.userid,
+        zone_id=zone_id,
+        name=data['name'],
+        description=data.get('description', '')
+    )
+    
+    if success:
+        return jsonify({"message": message}), 200
+    return jsonify({"error": message}), 400

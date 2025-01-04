@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from flask_login import login_user, login_required, logout_user
-from database.database import db, User, Feedback  # Import User and db
+from flask_login import login_user, login_required, logout_user, current_user
+from database.database import db, User  # Import User and db
+import uuid
+
 
 views = Blueprint('views', __name__)
 
@@ -12,19 +14,38 @@ def home():
 @views.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        found_user = User.query.filter_by(username=username).first()
-
-        if found_user and found_user.password == password:  # Consider using hashed passwords
-            login_user(found_user)
-            session.permanent = True  # Make the session permanent
-            return redirect(url_for('views.home'))
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.password == password:
+            # Invalidate any existing session
+            if user.session_id:
+                session.pop(user.session_id, None)
+            
+            # Generate a new session ID
+            new_session_id = str(uuid.uuid4())
+            user.session_id = new_session_id
+            db.session.commit()
+            
+            # Store the session ID in the session
+            session['session_id'] = new_session_id
+            
+            login_user(user)
+            return redirect(url_for('dashboard.dashboard'))
         else:
-            flash('Incorrect username or password. Please try again.', 'error')  # Flash error message
-            return redirect(url_for('views.login'))
-
+            flash('Invalid username or password', 'danger')
+    
     return render_template('loginmodule/login.html')
+
+@views.route('/logout')
+def logout():
+    if current_user.is_authenticated:
+        current_user.session_id = None
+        db.session.commit()
+        logout_user()
+    return redirect(url_for('views.login'))
+
 
 @views.route('/register', methods=['GET', 'POST'])
 def register():
@@ -45,11 +66,3 @@ def register():
         return redirect(url_for('views.login'))
 
     return render_template('loginmodule/register.html')
-
-
-@views.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    session.clear()
-    return redirect(url_for('views.login'))

@@ -5,14 +5,14 @@ import paho.mqtt.client as mqtt
 import json
 from threading import Thread
 import time
-from database.database import db, Device, Sensor
+from database.database import db, Device, Sensor, SensorType
 
 devicemanage_bp = Blueprint('devicemanage', __name__)
 
 # MQTT Configuration
-BROKER_ADDRESS = "atechpromqtt" 
+BROKER_ADDRESS = "atechpromqtt"
 BROKER_PORT = 1883
-MQTT_TOPIC = "home/#"  
+MQTT_TOPIC = "home/#"
 DEVICE_TIMEOUT = 3  # seconds
 CHECK_INTERVAL = 3  # seconds
 
@@ -136,150 +136,110 @@ def devicemanage():
     ]
     return render_template('devicemanage/devicemanage.html', user=current_user, devices=device_list)
 
-
-    """API to add a new device and associated sensors."""
-    data = request.get_json()
-    device_id = data.get('device_id')
-    title = data.get('title')  # Get title from request data
-    description = data.get('description')  # Get description from request data
-    user_id = current_user.get_id()
-
-    # Check if the device already exists
-    if Device.query.filter_by(device_id=device_id).first():
-        return jsonify({"error": "Device already exists"}), 400
-
-    # Create a new device entry
-    new_device = Device(
-        device_id=device_id,
-        title=title,  # Set the title
-        description=description,  # Set the description
-        userid=user_id,
-        status=True
-    )
-    db.session.add(new_device)
-
-    SENSOR_TYPE_MAPPING = {
-        "reed_switch": "Contact Sensor",
-        "photo_interrupter": "Contact Sensor",
-        "relay": "Relay",
-        "temperature": "Temperature Sensor",
-        "humidity": "Humidity Sensor",
-        "pir": "Motion Sensor", 
-        "photoresistor": "Light Sensor"
-    }
-
-    # Categorize sensors
-    def categorize_sensor_type(sensor_key, value):
-        sensor_type = SENSOR_TYPE_MAPPING.get(sensor_key)
-        if sensor_type:
-            return sensor_type
-
-        # Default categorization for binary states
-        binary_states = ['ON', 'OFF', 'OPEN', 'CLOSED', 'CLEAR', 'TRIGGERED']
-        if isinstance(value, str) and value.upper() in binary_states:
-            return "Binary Sensor"
-
-        # Default categorization for numeric values
-        if isinstance(value, (int, float)):
-            return "Numeric Sensor"
-
-        return "Unknown Sensor"
-
-    # Check and add sensors if available
-    if device_id in devices:
-        device_info = devices[device_id]
-        
-        # Add sensors from the device's sensor information
-        for sensor_key, sensor_data in device_info.get('sensors', {}).items():
-            sensor_type = categorize_sensor_type(sensor_key, sensor_data.get('value'))
-            
-            new_sensor = Sensor(
-                device_id=device_id,
-                sensor_key=sensor_key,
-                sensor_type=sensor_type,
-                value=str(sensor_data.get('value')),
-                status=sensor_data.get('status', 'online'),
-                last_seen=datetime.now()
-            )
-            db.session.add(new_sensor)
-
-    db.session.commit()
-    return jsonify({"message": "Device and sensors added successfully"}), 201
 @devicemanage_bp.route('/add_device', methods=['POST'])
 @login_required
 def add_device():
     """API to add a new device and associated sensors."""
     data = request.get_json()
+    print("Incoming request data:", data)
+
     device_id = data.get('device_id')
-    title = data.get('title')  # Get title from request data
-    description = data.get('description')  # Get description from request data
-    user_id = current_user.get_id()  # Get the current user's ID
+    title = data.get('title')
+    description = data.get('description')
+    user_id = current_user.get_id()
+
+    print(f"Processing device: {device_id}, title: {title}, user_id: {user_id}")
 
     # Check if the device already exists
     if Device.query.filter_by(device_id=device_id).first():
         return jsonify({"error": "Device already exists"}), 400
 
+    # Check if device exists in MQTT memory
+    mqtt_device_data = devices.get(device_id)
+    if not mqtt_device_data:
+        print(f"Warning: Device {device_id} not found in MQTT data")
+        
     # Create a new device entry
     new_device = Device(
         device_id=device_id,
-        title=title,  # Set the title
-        description=description,  # Set the description
-        userid=user_id,  # Associate the device with the current user
+        title=title,
+        description=description,
+        userid=user_id,
         status=True
     )
     db.session.add(new_device)
+    print(f"Added new device: {device_id}")
 
-    SENSOR_TYPE_MAPPING = {
-        "reed_switch": "Contact Sensor",
-        "photo_interrupter": "Contact Sensor",
-        "relay": "Relay",
-        "temperature": "Temperature Sensor",
-        "humidity": "Humidity Sensor",
-        "pir": "Motion Sensor", 
-        "photoresistor": "Light Sensor"
-    }
+    # Fetch all sensor types from the database
+    sensor_types = SensorType.query.all()
+    sensor_type_mapping = {st.type_key: st.id for st in sensor_types}
+    print("Available sensor types:", sensor_type_mapping)
 
-    # Categorize sensors
-    def categorize_sensor_type(sensor_key, value):
-        sensor_type = SENSOR_TYPE_MAPPING.get(sensor_key)
-        if sensor_type:
-            return sensor_type
-
-        # Default categorization for binary states
-        binary_states = ['ON', 'OFF', 'OPEN', 'CLOSED', 'CLEAR', 'TRIGGERED']
-        if isinstance(value, str) and value.upper() in binary_states:
-            return "Binary Sensor"
-
-        # Default categorization for numeric values
-        if isinstance(value, (int, float)):
-            return "Numeric Sensor"
-
-        return "Unknown Sensor"
-
-    # Check and add sensors if available
-    if device_id in devices:
-        device_info = devices[device_id]
-        
-        # Add sensors from the device's sensor information
-        for sensor_key, sensor_data in device_info.get('sensors', {}).items():
-            sensor_type = categorize_sensor_type(sensor_key, sensor_data.get('value'))
-            
-            new_sensor = Sensor(
-                device_id=device_id,
-                sensor_key=sensor_key,
-                sensor_type=sensor_type,
-                value=str(sensor_data.get('value')),
-                status=sensor_data.get('status', 'online'),
-                last_seen=datetime.now(),
-                userid=user_id  # Associate the sensor with the current user
+    # Add a default 'unknown' sensor type if it doesn't exist
+    if 'unknown' not in sensor_type_mapping:
+        try:
+            unknown_sensor_type = SensorType(
+                type_key='unknown',
+                display_name='Unknown Sensor',
+                unit=None,
+                states=None
             )
-            db.session.add(new_sensor)
+            db.session.add(unknown_sensor_type)
+            db.session.flush()
+            sensor_type_mapping['unknown'] = unknown_sensor_type.id
+            print("Added unknown sensor type")
+        except Exception as e:
+            print(f"Error adding unknown sensor type: {e}")
+            return jsonify({"error": "Failed to create unknown sensor type"}), 500
 
-    db.session.commit()
-    return jsonify({"message": "Device and sensors added successfully"}), 201
+    def categorize_sensor_type(sensor_key):
+        sensor_type_id = sensor_type_mapping.get(sensor_key, sensor_type_mapping.get('unknown'))
+        print(f"Categorizing sensor {sensor_key} as type_id: {sensor_type_id}")
+        return sensor_type_id
 
+    try:
+        # Get sensors from MQTT data if available
+        if mqtt_device_data and 'sensors' in mqtt_device_data:
+            mqtt_sensors = mqtt_device_data['sensors']
+            print(f"Found MQTT sensors for device: {mqtt_sensors}")
+            
+            for sensor_key, sensor_data in mqtt_sensors.items():
+                print(f"Processing MQTT sensor: {sensor_key} with data: {sensor_data}")
+                
+                sensor_type_id = categorize_sensor_type(sensor_key)
+                if sensor_type_id is None:
+                    print(f"Error: Failed to categorize sensor type for key: {sensor_key}")
+                    continue
+
+                new_sensor = Sensor(
+                    device_id=device_id,
+                    sensor_key=sensor_key,
+                    sensor_type_id=sensor_type_id,
+                    value=str(sensor_data.get('value')),
+                    status=sensor_data.get('status', 'online'),
+                    last_seen=datetime.now(),
+                    userid=user_id
+                )
+                db.session.add(new_sensor)
+                print(f"Added sensor: {sensor_key} to device: {device_id}")
+
+        db.session.commit()
+        print("Successfully committed all changes to database")
+        
+        sensor_count = len(mqtt_device_data.get('sensors', {})) if mqtt_device_data else 0
+        return jsonify({
+            "message": "Device and sensors added successfully",
+            "device_id": device_id,
+            "sensor_count": sensor_count
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error during sensor creation: {str(e)}")
+        return jsonify({"error": f"Failed to save device and sensors: {str(e)}"}), 500
 
 @devicemanage_bp.route('/delete_device/<device_id>', methods=['DELETE'])
+@login_required
 def delete_device(device_id):
     """API to delete a device and its associated sensors."""
     # Find the device
@@ -302,8 +262,6 @@ def delete_device(device_id):
     except Exception as e:
         db.session.rollback()  # Rollback transaction in case of an error
         return jsonify({"error": f"Failed to delete device: {str(e)}"}), 500
-    
-
 
 @devicemanage_bp.route('/edit_device', methods=['POST'])
 @login_required
@@ -336,6 +294,6 @@ def edit_device():
             "last_seen": device.last_seen
         }
     }), 200
-    
 
+# Initialize MQTT client
 init_mqtt_client()

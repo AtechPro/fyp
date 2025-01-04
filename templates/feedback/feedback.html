@@ -11,36 +11,31 @@
         {% include 'navigation/nav.html' %}
     </nav>
 
-    <div class="content-container">
-        <div class="feedback-form-container">
-            <h1>{% if is_admin %}Admin Feedback Management{% else %}Submit Your Feedback{% endif %}</h1>
+    <main class="content-container">
+        <section class="feedback-form-container">
+            <h1>Submit Your Feedback</h1>
+            <form id="feedback-form">
+                <div class="form-group">
+                    <label for="feedback_title">Feedback Title:</label>
+                    <textarea id="feedback_title" name="feedback_title" rows="2" placeholder="Enter feedback title" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="feedback_desc">Your Feedback:</label>
+                    <textarea id="feedback_desc" name="feedback_desc" rows="6" placeholder="Write your feedback here" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </section>
 
-            {% if is_admin %}
-                <form method="POST" action="{{ url_for('feedback.submit_feedback') }}">
-                    <div class="form-group">
-                        <label for="admin_feedback_title">Feedback Title:</label>
-                        <textarea id="admin_feedback_title" name="feedback_title" rows="2" cols="50" placeholder="Title" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="admin_feedback_desc">Admin Feedback:</label>
-                        <textarea id="admin_feedback_desc" name="feedback_desc" rows="10" cols="50" placeholder="Enter your feedback here" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit Admin Feedback</button>
-                </form>
-            {% else %}
-                <form method="POST" action="{{ url_for('feedback.submit_feedback') }}">
-                    <div class="form-group">
-                        <label for="feedback_title">Feedback Title:</label>
-                        <textarea id="feedback_title" name="feedback_title" rows="2" cols="50" placeholder="Title" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="feedback_desc">Your Feedback:</label>
-                        <textarea id="feedback_desc" name="feedback_desc" rows="10" cols="50" placeholder="Enter your feedback here" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
-                </form>
-            {% endif %}
-        </div>
-    </div>
+        <section id="feedback-list">
+            <h1>Feedback List</h1>
+            <!-- Feedback items will be dynamically populated -->
+        </section>
+    </main>
+
+    <script>
+        const currentUserRole = "{{ current_user.role | tojson | safe }}";
+    </script>
+    <script src="/static/feedback/feedback.js"></script>
 </body>
 </html>

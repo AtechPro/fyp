@@ -4,6 +4,7 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+# User Model
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
     userid = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -11,12 +12,13 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(50), nullable=False)
     role = db.Column(db.Integer, nullable=False)
     password = db.Column(db.String(20), nullable=False)
+    session_id = db.Column(db.String(100), nullable=True)  # Add session_id field
 
-    # Relationship with Feedback and Device
+    # Relationships
     feedback = db.relationship('Feedback', cascade='all, delete-orphan', backref='user', lazy=True)
     devices = db.relationship('Device', cascade='all, delete-orphan', backref='user', lazy=True)
-    Sensor = db.relationship('Sensor', cascade='all, delete-orphan', backref='user', lazy=True)
-
+    sensors = db.relationship('Sensor', cascade='all, delete-orphan', backref='user', lazy=True)
+    zones = db.relationship('Zone', cascade='all, delete-orphan', backref='user', lazy=True)
 
     def get_id(self):
         return str(self.userid)
@@ -25,6 +27,7 @@ class User(db.Model, UserMixin):
         return self.role == 1
 
 
+# Feedback Model
 class Feedback(db.Model):
     __tablename__ = 'feedback'
     feedback_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -34,26 +37,42 @@ class Feedback(db.Model):
     time = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 
+# SensorType Model (New)
+class SensorType(db.Model):
+    __tablename__ = 'sensor_types'
+
+    id = db.Column(db.Integer, primary_key=True)
+    type_key = db.Column(db.String(50), unique=True, nullable=False)  # e.g., 'temperature', 'humidity'
+    display_name = db.Column(db.String(100), nullable=False)  # e.g., 'Temperature Sensor'
+    unit = db.Column(db.String(20), nullable=True)  # e.g., '°C', '%'
+    states = db.Column(db.JSON, nullable=True)  # e.g., ['OPEN', 'CLOSED'] for status sensors
+
+    def __repr__(self):
+        return f"<SensorType {self.type_key}>"
+
+
+# Sensor Model
 class Sensor(db.Model):
     __tablename__ = 'sensors'
 
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(50), db.ForeignKey('devices.device_id', ondelete='CASCADE'), nullable=False)
     sensor_key = db.Column(db.String(50), nullable=False)
-    sensor_type = db.Column(db.String(50), nullable=False)
+    sensor_type_id = db.Column(db.Integer, db.ForeignKey('sensor_types.id'), nullable=False)  # Foreign key to SensorType
     value = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(20), default='online')
     last_seen = db.Column(db.DateTime, default=datetime.now)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=False)  # User foreign key
+    userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=False)
 
     # Relationships
     device = db.relationship('Device', backref=db.backref('sensor_list', cascade='all, delete-orphan', lazy=True))
+    sensor_type = db.relationship('SensorType', backref=db.backref('sensors', lazy=True))
 
     def __repr__(self):
         return f"<Sensor {self.sensor_key} of Device {self.device_id}>"
 
 
-
+# Device Model
 class Device(db.Model):
     __tablename__ = 'devices'
 
@@ -64,22 +83,24 @@ class Device(db.Model):
     userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=True)
     last_seen = db.Column(db.DateTime, nullable=True)
 
-    def add_sensor(self, sensor_key, sensor_type, value=None, status="online"):
+    def add_sensor(self, sensor_key, sensor_type_id, value=None, status="online"):
         """Helper method to add a sensor to the device."""
         new_sensor = Sensor(
             device_id=self.device_id,
             sensor_key=sensor_key,
-            sensor_type=sensor_type,
+            sensor_type_id=sensor_type_id,
             value=str(value),
             status=status,
-            last_seen=datetime.now()
+            last_seen=datetime.now(),
+            userid=self.userid
         )
         db.session.add(new_sensor)
 
     def __repr__(self):
-        return f"<Device {self.device_id} - {self.title}>" 
-    
+        return f"<Device {self.device_id} - {self.title}>"
 
+
+# Zone Model
 class Zone(db.Model):
     __tablename__ = 'zones'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -88,8 +109,19 @@ class Zone(db.Model):
     description = db.Column(db.String(200), nullable=True)
     sensors = db.relationship('ZoneSensor', backref='zone', cascade='all, delete-orphan', lazy=True)
 
+    def __repr__(self):
+        return f"<Zone {self.name}>"
+
+
+# ZoneSensor Model
 class ZoneSensor(db.Model):
     __tablename__ = 'zone_sensors'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     zone_id = db.Column(db.Integer, db.ForeignKey('zones.id', ondelete='CASCADE'), nullable=False)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id', ondelete='CASCADE'), nullable=False)
+
+    def __repr__(self):
+        return f"<ZoneSensor {self.id}>"
+
+
+

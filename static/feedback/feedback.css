@@ -1,97 +1,138 @@
-/* General Page Styles */
+/* General Styles */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
     margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar ul {
+    list-style: none;
     padding: 0;
 }
 
-/* Container Styling */
+.sidebar ul li {
+    margin: 10px 0;
+}
+
+.sidebar ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.sidebar ul li a:hover {
+    text-decoration: underline;
+}
+
+/* Content Container */
 .content-container {
-    width: 100%;
-    max-width: 600px;
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-left: 250px; /* Adjust for sidebar width */
     padding: 20px;
-    margin: 20px auto; /* added auto to center the container */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
-/* Feedback Form Container */
-.feedback-form-container {
-    text-align: center;
+/* Feedback Form */
+.feedback-form-container, #feedback-list {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
 }
 
-.feedback-form-container h1 {
-    font-size: 24px;
-    color: #333333;
+.feedback-form-container h1, #feedback-list h1 {
+    font-size: 20px;
     margin-bottom: 20px;
+    color: #333;
 }
 
-/* Form Group Styling */
 .form-group {
     margin-bottom: 15px;
-    text-align: left;
 }
 
 label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #333333;
-    margin-bottom: 5px;
     display: block;
+    font-size: 14px;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
-/* Textarea Styling */
 textarea {
-    width: calc(100% - 20px);
-    max-width: 100%;
+    width: 100%;
     padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
     font-size: 14px;
-    border: 1px solid #cccccc;
-    border-radius: 5px;
     resize: vertical;
-    outline: none;
-    transition: border-color 0.3s ease;
 }
 
 textarea:focus {
     border-color: #007bff;
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+    outline: none;
 }
 
-/* Button Styling */
-.btn {  
-    display: block; /* changed from inline-block to block */
-    margin: 0 auto; /* added to center the button */
-    padding: 10px 20px;
-    font-size: 14px;
-    color: #ffffff;
-    background-color: #007bff;
+.btn {
+    background: #007bff;
+    color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
+    padding: 10px;
+    width: 100%;
+    font-size: 14px;
     cursor: pointer;
-    text-align: center;
-    transition: background-color 0.3s ease;
+    transition: background 0.3s ease;
 }
 
 .btn:hover {
-    background-color: #0056b3;
+    background: #0056b3;
 }
 
-/* Responsive Design */
+/* Feedback List */
+.feedback-item {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+}
+
+.feedback-item h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.feedback-item p {
+    font-size: 14px;
+    color: #555;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
     .content-container {
-        margin: 10px;
-        padding: 15px;
+        margin-left: 0;
+        padding-top: 20px;
+        flex-direction: column;
     }
 
-    textarea {
-        font-size: 12px;
-    }
-
-    .btn {
-        font-size: 12px;
-        padding: 8px 15px;
+    .feedback-form-container, #feedback-list {
+        max-width: 100%;
     }
 }
