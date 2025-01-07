@@ -3,7 +3,7 @@ from database.database import db, User, SensorType  # Import SensorType
 from view import views
 from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
-from templates.dashboard.dashboard import dashboardbp
+from templates.dashboard.dashboard import dashboardbp, init_mqtt_client
 from templates.devicemanage.devicemanage import devicemanage_bp
 from templates.zone.zone import zone_bp
 from flask_login import LoginManager, login_user, logout_user, current_user
@@ -48,7 +48,6 @@ class CustomSessionInterface(SecureCookieSessionInterface):
 app.session_interface = CustomSessionInterface()
 
 def populate_sensor_types():
-    """Populate the SensorType table with predefined sensor types."""
     sensor_types = [
         {
             'type_key': 'temperature',
@@ -136,5 +135,6 @@ def load_user(userid):
 
 if __name__ == '__main__':
     with app.app_context():
-        create_initial_user(app)  # Initialize database and create admin user
+        create_initial_user(app)  
+        init_mqtt_client() 
     app.run(debug=True, host='0.0.0.0')

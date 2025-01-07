@@ -18,9 +18,7 @@
             <select id="sensorTypeSelect">
                 <option value="temperature">Temperature</option>
                 <option value="humidity">Humidity</option>
-                <option value="reed_switch">Reed Switch</option>
-                <option value="photo_interrupter">Photo Interrupter</option>
-                <option value="relay">Relay</option>
+                <!-- Add more sensor types as needed -->
             </select>
             <button id="addTileButton">Add Tile</button>
         </div>
@@ -30,12 +28,9 @@
         </div>
     </main>
 
-    
     <script src="/static/extlibjs/paho-mqtt.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
     <script src="/static/extlibjs/chart.js"></script>
-    <script src="/static/dashboard/fetchmqtt.js"></script>
-
-
+    <script src="/static/dashboard/dashboard.js"></script>
 </body>
 </html>

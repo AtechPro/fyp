@@ -100,6 +100,24 @@ class Device(db.Model):
         return f"<Device {self.device_id} - {self.title}>"
 
 
+def add_sensor_to_device(device_id, sensor_key, sensor_type_id, value=None, status="online"):
+    device = Device.query.filter_by(device_id=device_id).first()
+    if device:
+        new_sensor = Sensor(
+            device_id=device.device_id,
+            sensor_key=sensor_key,
+            sensor_type_id=sensor_type_id,
+            value=str(value),
+            status=status,
+            last_seen=datetime.now(),
+            userid=device.userid
+        )
+        db.session.add(new_sensor)
+        db.session.commit()  # Commit the session to save changes to the database
+    else:
+        print(f"Device with id {device_id} not found")
+
+
 # Zone Model
 class Zone(db.Model):
     __tablename__ = 'zones'
@@ -124,4 +142,15 @@ class ZoneSensor(db.Model):
         return f"<ZoneSensor {self.id}>"
 
 
+class DashboardTile(db.Model):
+    __tablename__ = 'dashboard_tiles'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=False)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id', ondelete='CASCADE'), nullable=False)
 
+    # Relationships
+    user = db.relationship('User', backref=db.backref('dashboard_tiles', cascade='all, delete-orphan', lazy=True))
+    sensor = db.relationship('Sensor', backref=db.backref('dashboard_tiles', cascade='all, delete-orphan', lazy=True))
+
+    def __repr__(self):
+        return f"<DashboardTile {self.id}>"
