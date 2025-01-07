@@ -192,24 +192,32 @@ def delete_tile(tile_id):
 @login_required
 def categorize_sensors():
     try:
+        # Step 1: Check the database for paired sensors
+        paired_sensors = Sensor.query.all()
+        paired_sensor_ids = {sensor.device_id for sensor in paired_sensors}
+
+        # Step 2: Collect real-time data from MQTT
         current_time = time.time()
         categorized_data = {}
 
-        # Collect real-time data from MQTT
         for device_id, details in last_known_state.items():
-            if current_time - details.get("timestamp", 0) <= MAX_MESSAGE_AGE:
-                for key, value in details["data"].items():
-                    sensor_type = key  # Assuming sensor_key is the sensor type
-                    if sensor_type not in categorized_data:
-                        categorized_data[sensor_type] = []
-                    categorized_data[sensor_type].append({
-                        "device_id": device_id,
-                        "sensor_key": key,
-                        "value": value,
-                        "last_seen": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(details["timestamp"]))
-                    })
+            # Only process data from paired sensors
+            if device_id in paired_sensor_ids:
+                if current_time - details.get("timestamp", 0) <= MAX_MESSAGE_AGE:
+                    for key, value in details["data"].items():
+                        sensor_type = key  # Assuming sensor_key is the sensor type
+                        if sensor_type not in categorized_data:
+                            categorized_data[sensor_type] = []
+                        categorized_data[sensor_type].append({
+                            "device_id": device_id,
+                            "sensor_key": key,
+                            "value": value,
+                            "last_seen": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(details["timestamp"]))
+                        })
 
+        # Step 3: Return the categorized data
         return jsonify(categorized_data)
+
     except Exception as e:
         logger.error(f"Error categorizing sensors: {str(e)}")
         return jsonify({
