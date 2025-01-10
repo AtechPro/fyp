@@ -151,42 +151,7 @@ def get_sensors():
             "error": "Failed to retrieve sensor list",
             "message": f"An unexpected error occurred: {str(e)}"
         }), 500
-    
-# Get Dashboard Tiles Route
-@dashboardbp.route('/dashboard/tiles', methods=['GET', 'POST'])
-@login_required
-def manage_tiles():
-    if request.method == 'GET':
-        user_tiles = DashboardTile.query.filter_by(userid=current_user.userid).all()
-        tiles = [
-            {
-                "id": tile.id,
-                "sensor_id": tile.sensor_id,
-                "sensor_type": tile.sensor.sensor_type.display_name,
-                "value": tile.sensor.value,
-                "unit": tile.sensor.sensor_type.unit
-            }
-            for tile in user_tiles
-        ]
-        return jsonify(tiles)
 
-    if request.method == 'POST' :
-        data = request.json
-        sensor_id = data.get('sensor_id')
-
-        new_tile = DashboardTile(userid=current_user.userid, sensor_id=sensor_id)
-        db.session.add(new_tile)
-        db.session.commit()
-
-        return jsonify({"message": "Tile added successfully", "tile_id": new_tile.id}), 201
-
-@dashboardbp.route('/dashboard/tiles/<int:tile_id>', methods=['DELETE'])
-@login_required
-def delete_tile(tile_id):
-    tile = DashboardTile.query.get_or_404(tile_id)
-    db.session.delete(tile)
-    db.session.commit()
-    return jsonify({"message": "Tile deleted successfully"})
 
 @dashboardbp.route('/dashboard/categorize_sensors', methods=['GET'])
 @login_required
@@ -261,3 +226,107 @@ def control_relay(device_id):
             "error": "Failed to control relay",
             "message": str(e)
         }), 500
+    
+
+@dashboardbp.route('/dashboard/sensor_types', methods=['GET'])
+@login_required
+def get_sensor_types():
+    try:
+        # Fetch all sensor types from the database
+        sensor_types = SensorType.query.all()
+        
+        # Format the response
+        sensor_types_data = [
+            {
+                "id": sensor.id,  # Include sensor ID
+                "type_key": sensor.type_key,
+                "display_name": sensor.display_name,  # Use display_name instead of type_key
+                "unit": sensor.unit,
+                "states": sensor.states
+            }
+            for sensor in sensor_types
+        ]
+        
+        return jsonify(sensor_types_data)
+    except Exception as e:
+        logger.error(f"Error fetching sensor types: {str(e)}")
+        return jsonify({"error": "Failed to fetch sensor types"}), 500
+
+
+@dashboardbp.route('/dashboard/tiles', methods=['GET', 'POST'])
+@login_required
+def manage_tiles():
+    if request.method == 'GET':
+        try:
+            # Fetch all tiles for the current user
+            user_tiles = DashboardTile.query.filter_by(userid=current_user.userid).all()
+            logger.info(f"Fetched tiles for user {current_user.userid}: {user_tiles}")
+
+            tiles = [
+                {
+                    "id": tile.id,
+                    "sensor_id": tile.sensor_id,
+                    "sensor_type": tile.sensor.sensor_type.display_name,
+                    "value": tile.sensor.value,
+                    "unit": tile.sensor.sensor_type.unit
+                }
+                for tile in user_tiles
+            ]
+            return jsonify(tiles)
+        except Exception as e:
+            logger.error(f"Error fetching tiles: {str(e)}")
+            return jsonify({"error": "Failed to fetch tiles"}), 500
+
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            if not data or 'sensor_id' not in data:
+                return jsonify({"error": "Invalid request. 'sensor_id' is required."}), 400
+
+            sensor_id = data['sensor_id']
+
+            # Check if the sensor exists
+            sensor = Sensor.query.get(sensor_id)
+            if not sensor:
+                return jsonify({"error": f"Sensor with ID {sensor_id} not found"}), 404
+
+            # Check if the tile already exists for the user
+            existing_tile = DashboardTile.query.filter_by(userid=current_user.userid, sensor_id=sensor_id).first()
+            if existing_tile:
+                return jsonify({"error": "Tile already exists for this sensor"}), 400
+
+            # Create a new tile
+            new_tile = DashboardTile(userid=current_user.userid, sensor_id=sensor_id)
+            db.session.add(new_tile)
+            db.session.commit()
+
+            return jsonify({
+                "message": "Tile added successfully",
+                "tile_id": new_tile.id
+            }), 201
+        except Exception as e:
+            logger.error(f"Error adding tile: {str(e)}")
+            db.session.rollback()
+            return jsonify({"error": "Failed to add tile"}), 500
+
+
+@dashboardbp.route('/dashboard/tiles/<int:tile_id>', methods=['DELETE'])
+@login_required
+def delete_tile(tile_id):
+    try:
+        # Fetch the tile
+        tile = DashboardTile.query.get_or_404(tile_id)
+
+        # Ensure the tile belongs to the current user
+        if tile.userid != current_user.userid:
+            return jsonify({"error": "Unauthorized to delete this tile"}), 403
+
+        # Delete the tile
+        db.session.delete(tile)
+        db.session.commit()
+
+        return jsonify({"message": "Tile deleted successfully"})
+    except Exception as e:
+        logger.error(f"Error deleting tile: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to delete tile"}), 500

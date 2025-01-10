@@ -1,85 +1,38 @@
 // Utility Class for Sensor Configuration
 class SensorConfigManager {
     constructor() {
-        this.sensorTypes = {
-            temperature: {
-                unit: '°C',
-                type: 'chart',
-                states: null,
-                color: '#FF0000',
-                maxDataPoints: 10,
-                min: 0,
-                max: 50  // Set max value for temperature to 50
-            },
-            humidity: {
-                unit: '%',
-                type: 'chart',
-                states: null,
-                color: '#0000FF',
-                maxDataPoints: 10,
-                min: 0,
-                max: 100
-            },
-            photoresistor: {
-                unit: 'Lux',
-                type: 'chart',
-                states: null,
-                color: '#FFA500',
-                maxDataPoints: 10,
-                min: 0,
-                max: 1000
-            },
-            pir: {
-                unit: 'N/A',
-                type: 'status',
-                states: {
-                    'MOTION': { label: 'Motion Detected', color: 'red', icon: '🚨' },
-                    'NO MOTION': { label: 'No Motion', color: 'green', icon: '✅' }
-                },
-                color: '#00FF00',
-                maxDataPoints: 10,
-                min: 0,
-                max: 1
-            },
-            reed_switch: {
-                unit: 'N/A',
-                type: 'status',
-                states: {
-                    'OPEN': { label: 'Open', color: 'red', icon: '🔓' },
-                    'CLOSED': { label: 'Closed', color: 'green', icon: '🔒' }
-                },
-                color: '#00FF00',
-                maxDataPoints: 10,
-                min: 0,
-                max: 1
-            },
-            photo_interrupter: {
-                unit: 'N/A',
-                type: 'status',
-                states: {
-                    'CLEAR': { label: 'Clear', color: 'green', icon: '✅' },
-                    'BLOCKED': { label: 'Blocked', color: 'red', icon: '🚫' }
-                },
-                color: '#FFFF00',
-                maxDataPoints: 10,
-                min: 0,
-                max: 1
-            },
-            relay: {
-                unit: 'N/A',
-                type: 'status',
-                states: {
-                    'ON': { label: 'Active', color: 'green', icon: '⚡' },
-                    'OFF': { label: 'Inactive', color: 'gray', icon: '❌' }
-                },
-                color: '#FFA500',
-                maxDataPoints: 10,
-                min: 0,
-                max: 1,
-                controllable: true
-            }
-        };
+        this.sensorTypes = {}; // Will be populated dynamically from the backend
     }
+
+    async fetchSensorTypes() {
+    try {
+        const response = await fetch('/dashboard/sensor_types');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sensor types. HTTP Status: ${response.status}`);
+        }
+
+        const sensorTypes = await response.json();
+        console.log('Fetched sensor types:', sensorTypes); // Log fetched data
+
+        this.sensorTypes = sensorTypes.reduce((acc, sensor) => {
+            acc[sensor.type_key] = {
+                unit: sensor.unit,
+                type: sensor.states ? 'status' : 'chart',
+                states: sensor.states,
+                color: this.getDefaultColor(sensor.type_key),
+                maxDataPoints: 10,
+                min: 0,
+                max: this.getDefaultMaxValue(sensor.type_key),
+                controllable: sensor.type_key === 'relay'
+            };
+            return acc;
+        }, {});
+
+        console.log('Processed sensor types:', this.sensorTypes); // Log processed data
+    } catch (error) {
+        console.error('Error fetching sensor types:', error);
+    }
+}
 
     getSensorConfig(sensorType) {
         return this.sensorTypes[sensorType] || null;
@@ -92,8 +45,30 @@ class SensorConfigManager {
             .join(' ');
     }
 
-    getAllSensorTypes() {
-        return Object.keys(this.sensorTypes);
+    getDefaultColor(sensorType) {
+        const colors = {
+            temperature: '#FF0000',
+            humidity: '#0000FF',
+            photoresistor: '#FFA500',
+            pir: '#00FF00',
+            reed_switch: '#00FF00',
+            photo_interrupter: '#FFFF00',
+            relay: '#FFA500'
+        };
+        return colors[sensorType] || '#000000';
+    }
+
+    getDefaultMaxValue(sensorType) {
+        const maxValues = {
+            temperature: 50,
+            humidity: 100,
+            photoresistor: 1000,
+            pir: 1,
+            reed_switch: 1,
+            photo_interrupter: 1,
+            relay: 1
+        };
+        return maxValues[sensorType] || 100;
     }
 }
 
@@ -108,8 +83,8 @@ class TileRenderer {
 
     createSensorTiles(sensorData) {
         sensorData.forEach(sensor => {
-            const { device_id, sensor_id, sensor_key } = sensor;
-            this.createSingleTile(sensor_key, device_id, sensor_id);
+            const { device_id, sensor_id, sensor_type } = sensor;
+            this.createSingleTile(sensor_type, device_id, sensor_id);
         });
     }
 
@@ -121,7 +96,7 @@ class TileRenderer {
         }
 
         const tileId = `${deviceId}_${sensorId}_${sensorType}Tile`;
-        
+
         // Prevent duplicate tiles
         if (this.tiles[tileId]) {
             console.warn(`Tile for ${sensorType} already exists`);
@@ -161,6 +136,7 @@ class TileRenderer {
             return `
                 <div class="tile-header">
                     <h3>${formattedName} (${deviceId})</h3>
+                    <button class="btn btn-danger delete-tile-button" data-tile-id="${sensorId}">Delete</button>
                 </div>
                 <div class="tile-content">
                     <canvas id="${deviceId}_${sensorId}_${sensorType}Chart"></canvas>
@@ -175,6 +151,7 @@ class TileRenderer {
         return `
             <div class="tile-header">
                 <h3>${formattedName} (${deviceId})</h3>
+                <button class="btn btn-danger delete-tile-button" data-tile-id="${sensorId}">Delete</button>
             </div>
             <div class="tile-content">
                 <span id="${iconId}" class="tile-icon"></span>
@@ -186,34 +163,28 @@ class TileRenderer {
     addControlButton(tile, sensorType, deviceId, sensorId) {
         const controlContainer = document.createElement('div');
         controlContainer.classList.add('tile-controls');
-    
-        // Create the toggle button
+
         const toggleButton = document.createElement('button');
         toggleButton.textContent = 'Toggle';
         toggleButton.classList.add('btn', 'btn-secondary');
-        toggleButton.dataset.state = 'OFF'; // Initialize state
-    
-        // Create a loading spinner
+        toggleButton.dataset.state = 'OFF';
+
         const spinner = document.createElement('span');
         spinner.classList.add('spinner-border', 'spinner-border-sm', 'd-none');
         spinner.setAttribute('role', 'status');
         spinner.setAttribute('aria-hidden', 'true');
-    
-        // Create an error message container
+
         const errorMessage = document.createElement('div');
         errorMessage.classList.add('text-danger', 'mt-2', 'd-none');
-    
-        // Add event listener for the toggle button
+
         toggleButton.addEventListener('click', async () => {
             const currentState = toggleButton.dataset.state;
             const newState = currentState === 'ON' ? 'OFF' : 'ON';
-    
-            // Disable the button and show the spinner
+
             toggleButton.disabled = true;
             spinner.classList.remove('d-none');
-    
+
             try {
-                // Send a POST request to the backend to control the relay
                 const response = await fetch(`/dashboard/${deviceId}/relay/command`, {
                     method: 'POST',
                     headers: {
@@ -221,37 +192,28 @@ class TileRenderer {
                     },
                     body: JSON.stringify({ state: newState })
                 });
-    
-                // Check if the response is OK
+
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to set relay state. HTTP Status: ${response.status}, Response: ${errorText}`);
+                    throw new Error(`Failed to set relay state. HTTP Status: ${response.status}`);
                 }
-    
-                // Parse the JSON response
+
                 const result = await response.json();
-    
-                // Update the button state and UI
                 toggleButton.dataset.state = newState;
                 const valueElement = document.getElementById(`${deviceId}_${sensorId}_${sensorType}Value`);
                 if (valueElement) {
                     valueElement.textContent = newState === 'ON' ? 'Active' : 'Inactive';
                 }
-    
-                // Hide the error message if previously shown
+
                 errorMessage.classList.add('d-none');
             } catch (error) {
-                // Show the error message
                 errorMessage.textContent = `Error: ${error.message}`;
                 errorMessage.classList.remove('d-none');
             } finally {
-                // Re-enable the button and hide the spinner
                 toggleButton.disabled = false;
                 spinner.classList.add('d-none');
             }
         });
-    
-        // Append elements to the control container
+
         toggleButton.appendChild(spinner);
         controlContainer.appendChild(toggleButton);
         controlContainer.appendChild(errorMessage);
@@ -261,9 +223,9 @@ class TileRenderer {
     initializeChart(sensorType, config, deviceId, sensorId) {
         const ctx = document.getElementById(`${deviceId}_${sensorId}_${sensorType}Chart`);
         if (!ctx) return null;
-    
-        const chartColor = config.color || '#000000'; // Default to black if no color provided
-    
+
+        const chartColor = config.color || '#000000';
+
         this.charts[`${deviceId}_${sensorId}_${sensorType}`] = new Chart(ctx, {
             type: 'line',
             data: {
@@ -271,10 +233,10 @@ class TileRenderer {
                 datasets: [{
                     label: this.configManager.formatSensorName(sensorType),
                     data: [],
-                    borderColor: chartColor, // Line color
-                    backgroundColor: chartColor, // Not used, but left for consistency
-                    tension: 0.1, // Smooth the line
-                    fill: false // Disable fill under the line
+                    borderColor: chartColor,
+                    backgroundColor: chartColor,
+                    tension: 0.1,
+                    fill: false
                 }]
             },
             options: {
@@ -291,32 +253,31 @@ class TileRenderer {
                         }
                     },
                     x: {
-                        display: false // Hide x-axis labels
+                        display: false
                     }
                 },
                 plugins: {
                     legend: {
-                        display: false // Hide legend
+                        display: false
                     }
                 }
             }
         });
-    
+
         return this.charts[`${deviceId}_${sensorId}_${sensorType}`];
     }
 
     updateSensorDisplay(sensorType, value, config, deviceId, sensorId) {
         const valueElement = document.getElementById(`${deviceId}_${sensorId}_${sensorType}Value`);
         const iconElement = document.getElementById(`${deviceId}_${sensorId}_${sensorType}Icon`);
-        
+
         if (!valueElement) return;
-    
-        // Convert value to a number if it's a string
+
         const numericValue = typeof value === 'string' ? parseFloat(value) : value;
-    
+
         if (config.type === 'chart') {
             this.updateChart(sensorType, numericValue, deviceId, sensorId);
-            valueElement.textContent = numericValue.toFixed(1); // Ensure value is a number
+            valueElement.textContent = numericValue.toFixed(1);
         } else if (config.type === 'status') {
             const state = config.states[String(value)];
             if (state) {
@@ -336,7 +297,7 @@ class TileRenderer {
     updateChart(sensorType, value, deviceId, sensorId) {
         const chart = this.charts[`${deviceId}_${sensorId}_${sensorType}`];
         const config = this.configManager.getSensorConfig(sensorType);
-        
+
         if (!chart || typeof value !== 'number') return;
 
         chart.data.labels.push(new Date().toLocaleTimeString());
@@ -347,7 +308,7 @@ class TileRenderer {
             chart.data.datasets[0].data.shift();
         }
 
-        chart.update('none');  // Update without animation
+        chart.update('none');
     }
 }
 
@@ -356,55 +317,96 @@ class DataManager {
     constructor(tileRenderer, configManager) {
         this.tileRenderer = tileRenderer;
         this.configManager = configManager;
-
-        // Setup relay control event listener
-        document.addEventListener('relay-control', this.handleRelayControl.bind(this));
+        this.sensors = []; // Store fetched sensors here
     }
 
-    async fetchCategorizedSensors() {
+    async fetchUserTiles() {
         try {
-            const response = await fetch('/dashboard/categorize_sensors');
+            const response = await fetch('/dashboard/tiles');
             if (!response.ok) {
-                console.error(`Failed to fetch categorized sensors. HTTP Status: ${response.status}`);
-                return;
+                throw new Error(`Failed to fetch user tiles. HTTP Status: ${response.status}`);
             }
 
-            const categorizedData = await response.json();
-            this.processCategorizedSensors(categorizedData);
+            const tiles = await response.json();
+            this.tileRenderer.createSensorTiles(tiles);
         } catch (error) {
-            console.error('Error fetching categorized sensors:', error);
+            console.error('Error fetching user tiles:', error);
         }
     }
 
-    processCategorizedSensors(categorizedData) {
-        Object.keys(categorizedData).forEach(category => {
-            const sensors = categorizedData[category];
-            sensors.forEach(sensor => {
-                const config = this.configManager.getSensorConfig(sensor.sensor_key);
-                if (config) {
-                    this.tileRenderer.createSingleTile(sensor.sensor_key, sensor.device_id, sensor.sensor_id);
-                    this.tileRenderer.updateSensorDisplay(sensor.sensor_key, sensor.value, config, sensor.device_id, sensor.sensor_id);
-                }
+    async fetchSensorTypes() {
+        try {
+            const response = await fetch('/dashboard/sensor_types', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
-        });
+    
+            if (!response.ok) {
+                throw new Error(`Failed to fetch sensor types. HTTP Status: ${response.status}`);
+            }
+    
+            const sensorTypes = await response.json();
+            return sensorTypes;
+        } catch (error) {
+            console.error('Error fetching sensor types:', error);
+            return [];
+        }
     }
 
-    async handleRelayControl(event) {
-        const { sensorType, deviceId, sensorId, state } = event.detail;
-        
-        try {
-            const response = await fetch(`/relay/${deviceId}/${sensorId}/${state}`);
-            const data = await response.json();
+    findSensorByType(sensorType) {
+        return this.sensors.find(sensor => sensor.type_key === sensorType);
+    }
 
-            if (data.error) {
-                console.error(data.error);
-                // Optionally show error to user
+    async addTile(sensorId) {
+        try {
+            // Fetch sensor types
+            const sensorTypes = await fetchSensorTypes();
+    
+            // Check if the selected sensor ID is available
+            const sensorAvailable = sensorTypes.some(sensor => sensor.id === parseInt(sensorId));
+            if (!sensorAvailable) {
+                alert('Selected sensor is not available.');
+                return;
+            }
+    
+            // Create a new tile
+            const response = await fetch('/dashboard/add_tiles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sensor_id: sensorId }),
+            });
+    
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Tile added successfully:', result);
+                fetchAndDisplayTiles(); // Refresh the tiles
             } else {
-                console.log(data.message);
-                // Optionally show success message
+                console.error('Failed to add tile:', response.statusText);
             }
         } catch (error) {
-            console.error('Error controlling relay:', error);
+            console.error('Error adding tile:', error);
+        }
+    }
+
+    async deleteTile(tileId) {
+        try {
+            const response = await fetch(`/dashboard/tiles/${tileId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to delete tile. HTTP Status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log(result.message);
+            this.fetchUserTiles(); // Refresh the tiles after deleting
+        } catch (error) {
+            console.error('Error deleting tile:', error);
         }
     }
 }
@@ -426,11 +428,9 @@ class DashboardManager {
     }
 
     async initializeDashboard() {
-        this.startMessagePolling();
-        this.setupDynamicTileAddition();
-
-        // Fetch and display categorized sensors
-        await this.dataManager.fetchCategorizedSensors();
+        await this.configManager.fetchSensorTypes(); // Fetch sensor types first
+        this.setupEventListeners();
+        await this.dataManager.fetchUserTiles();
     }
 
     initializeDashboardContainer() {
@@ -438,40 +438,282 @@ class DashboardManager {
         if (!container) {
             container = document.createElement('div');
             container.classList.add('dashboard-grid');
-            
+
             const dashboardContainer = document.querySelector('.dashboard-container') || document.body;
             dashboardContainer.appendChild(container);
         }
         return container;
     }
 
-    startMessagePolling() {
-        // Initial fetch
-        this.dataManager.fetchCategorizedSensors();
-
-        // Start periodic polling
-        setInterval(() => {
-            this.dataManager.fetchCategorizedSensors();
-        }, this.config.pollingInterval);
+    populateSensorTypeSelect(sensorTypes) {
+        const sensorTypeSelect = document.getElementById('sensorTypeSelect');
+        if (!sensorTypeSelect) {
+            console.error('sensorTypeSelect element not found');
+            return;
+        }
+    
+        // Clear existing options (except the default one)
+        while (sensorTypeSelect.options.length > 1) {
+            sensorTypeSelect.remove(1);
+        }
+    
+        // Add new options based on the fetched sensor types
+        sensorTypes.forEach(sensorType => {
+            const option = document.createElement('option');
+            option.value = sensorType.type_key; // Use type_key as the value
+            option.textContent = sensorType.display_name; // Use display_name as the label
+            sensorTypeSelect.appendChild(option);
+        });
+    
+        console.log('Dropdown populated with sensor types:', sensorTypes); // Log populated data
     }
 
-    setupDynamicTileAddition() {
+    async fetchAndPopulateSensorTypes() {
+        try {
+            const response = await fetch('/dashboard/sensor_types');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch sensor types. HTTP Status: ${response.status}`);
+            }
+    
+            const sensorTypes = await response.json();
+            console.log('Fetched sensor types:', sensorTypes); // Log fetched data
+    
+            this.populateSensorTypeSelect(sensorTypes); // Call the method to populate the dropdown
+        } catch (error) {
+            console.error('Error fetching sensor types:', error);
+        }
+    }
+
+    async initializeDashboard() {
+        await this.fetchAndPopulateSensorTypes(); // Fetch and populate sensor types
+        this.setupEventListeners();
+        await this.dataManager.fetchUserTiles();
+    }
+
+    
+    setupEventListeners() {
         const addTileButton = document.getElementById('addTileButton');
         const sensorTypeSelect = document.getElementById('sensorTypeSelect');
 
+        console.log('addTileButton:', addTileButton); // Log the button element
+        console.log('sensorTypeSelect:', sensorTypeSelect); // Log the select element
+
         if (addTileButton && sensorTypeSelect) {
             addTileButton.addEventListener('click', () => {
+                console.log('Add Tile button clicked'); // Log button click
                 const selectedSensorType = sensorTypeSelect.value;
+                console.log('Selected sensor type:', selectedSensorType); // Log selected value
+
                 if (selectedSensorType) {
-                    this.tileRenderer.createSingleTile(selectedSensorType);
+                    const sensor = this.dataManager.findSensorByType(selectedSensorType);
+                    console.log('Found sensor:', sensor); // Log found sensor
+
+                    if (sensor) {
+                        this.dataManager.addTile(sensor.sensor_id);
+                    }
                 }
             });
+        } else {
+            console.error('addTileButton or sensorTypeSelect not found');
         }
+
+        // Handle tile deletion
+        this.container.addEventListener('click', (event) => {
+            if (event.target.classList.contains('delete-tile-button')) {
+                console.log('Delete Tile button clicked'); // Log button click
+                const tileId = event.target.dataset.tileId;
+                console.log('Tile ID to delete:', tileId); // Log tile ID
+
+                this.dataManager.deleteTile(tileId);
+            }
+        });
+    }
+
+
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sensorSelect = document.getElementById('sensorSelect'); // Replace 'sensorSelect' with the actual ID of your sensor select element
+    const addTileButton = document.getElementById('addTileButton'); // Replace 'addTileButton' with the actual ID of your add tile button
+    const tilesContainer = document.getElementById('tilesContainer'); // Replace 'tilesContainer' with the actual ID of your tiles container
+
+    // Debugging: Log elements to ensure they are found
+    console.log('Tiles Container:', tilesContainer);
+    console.log('Add Tile Button:', addTileButton);
+    console.log('Sensor Select:', sensorSelect);
+
+    if (!addTileButton || !sensorSelect || !tilesContainer) {
+        console.error('One or more required elements not found!');
+        return;
+    }
+
+    // Fetch and display existing tiles
+    async function fetchAndDisplayTiles() {
+        try {
+            const response = await fetch('/dashboard/tiles');
+            const tiles = await response.json();
+            tilesContainer.innerHTML = ''; // Clear existing tiles
+    
+            tiles.forEach(tile => {
+                const tileElement = document.createElement('div');
+                tileElement.className = 'tile';
+                tileElement.innerHTML = `
+                    <h3>${tile.sensor_type}</h3>
+                    <p>Value: ${tile.value} ${tile.unit}</p>
+                    <button onclick="deleteTile(${tile.id})">Delete</button>
+                `;
+                tilesContainer.appendChild(tileElement);
+            });
+        } catch (error) {
+            console.error('Error fetching tiles:', error);
+        }
+    }
+
+    // Add a new tile
+    addTileButton.addEventListener('click', async () => {
+        const selectedSensorId = sensorSelect.value;
+
+        if (!selectedSensorId) {
+            alert('Please select a sensor.');
+            return;
+        }
+        
+        await addTile(selectedSensorId);
+    });
+
+    // Delete a tile
+    window.deleteTile = async (tileId) => {
+        try {
+            const response = await fetch(`/dashboard/tiles/${tileId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                console.log('Tile deleted successfully');
+                fetchAndDisplayTiles(); // Refresh the tiles
+            } else {
+                console.error('Failed to delete tile:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error deleting tile:', error);
+        }
+    };
+
+    // Populate the sensor dropdown
+    async function populateSensorDropdown() {
+        try {
+            const response = await fetch('/dashboard/sensor_types');
+            const sensorTypes = await response.json();
+            sensorSelect.innerHTML = '<option value="" disabled selected>Select a sensor type</option>';
+
+            sensorTypes.forEach(sensor => {
+                const option = document.createElement('option');
+                option.value = sensor.id; // Use sensor ID as the value
+                option.textContent = sensor.display_name; // Use display name as the label
+                sensorSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error fetching sensor types:', error);
+        }
+    }
+
+    // Initial fetch to populate the sensor dropdown and display tiles
+    populateSensorDropdown();
+    fetchAndDisplayTiles();
+});
+
+// Define the necessary HTML elements
+const sensorSelect = document.getElementById('sensorSelect'); // Replace with the actual ID of your sensor select element
+const addTileButton = document.getElementById('addTileButton'); // Replace with the actual ID of your add tile button
+const tilesContainer = document.getElementById('tilesContainer'); // Replace with the actual ID of your tiles container
+
+// Function to fetch sensor types
+async function fetchSensorTypes() {
+    try {
+        const response = await fetch('/dashboard/sensor_types', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sensor types. HTTP Status: ${response.status}`);
+        }
+
+        const sensorTypes = await response.json();
+        return sensorTypes;
+    } catch (error) {
+        console.error('Error fetching sensor types:', error);
+        return [];
     }
 }
 
-// Initialize Dashboard on DOM Content Loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing Dashboard');
-    window.Dashboard = new DashboardManager();
+// Function to add a new tile
+async function addTile(sensorId) {
+    try {
+        // Fetch sensor types
+        const sensorTypes = await fetchSensorTypes();
+
+        // Check if the selected sensor ID is available
+        const sensorAvailable = sensorTypes.some(sensor => sensor.id === parseInt(sensorId));
+        if (!sensorAvailable) {
+            alert('Selected sensor is not available.');
+            return;
+        }
+
+        // Create a new tile
+        const response = await fetch('/dashboard/add_tiles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sensor_id: sensorId }),
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Tile added successfully:', result);
+            fetchAndDisplayTiles(); // Refresh the tiles
+        } else {
+            console.error('Failed to add tile:', response.statusText);
+        }
+    } catch (error) {
+        console.error('Error adding tile:', error);
+    }
+}
+
+// Function to fetch and display existing tiles
+async function fetchAndDisplayTiles() {
+    try {
+        const response = await fetch('/dashboard/tiles');
+        const tiles = await response.json();
+        tilesContainer.innerHTML = ''; // Clear existing tiles
+
+        tiles.forEach(tile => {
+            const tileElement = document.createElement('div');
+            tileElement.className = 'tile';
+            tileElement.innerHTML = `
+                <h3>${tile.sensor_type}</h3>
+                <p>Value: ${tile.value} ${tile.unit}</p>
+                <button onclick="deleteTile(${tile.id})">Delete</button>
+            `;
+            tilesContainer.appendChild(tileElement);
+        });
+    } catch (error) {
+        console.error('Error fetching tiles:', error);
+    }
+}
+
+// Event listener for the add tile button
+addTileButton.addEventListener('click', async () => {
+    const selectedSensorId = sensorSelect.value;
+
+    if (!selectedSensorId) {
+        alert('Please select a sensor.');
+        return;
+    }
+
+    await addTile(selectedSensorId);
 });

@@ -152,5 +152,28 @@ class DashboardTile(db.Model):
     user = db.relationship('User', backref=db.backref('dashboard_tiles', cascade='all, delete-orphan', lazy=True))
     sensor = db.relationship('Sensor', backref=db.backref('dashboard_tiles', cascade='all, delete-orphan', lazy=True))
 
+
+class AutomationRule(db.Model):
+    __tablename__ = 'automation_rules'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id', ondelete='CASCADE'), nullable=False)
+    threshold = db.Column(db.Float, nullable=False)
+    relay_device_id = db.Column(db.String(50), nullable=False)
+    relay_state = db.Column(db.String(10), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+
+    # Relationships
+    sensor = db.relationship('Sensor', backref=db.backref('automation_rules', cascade='all, delete-orphan', lazy=True))
+
     def __repr__(self):
-        return f"<DashboardTile {self.id}>"
+        return f"<AutomationRule {self.sensor_id} {self.threshold} {self.relay_device_id} {self.relay_state}>"
+
+    def is_applicable(self):
+        """Check if the sensor type is suitable for automation."""
+        sensor_type = SensorType.query.get(self.sensor.sensor_type_id)
+        if sensor_type.states:
+            # For binary sensors, check if the threshold is within the states
+            return str(self.threshold) in sensor_type.states
+        else:
+            # For continuous sensors, any threshold is applicable
+            return True

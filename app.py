@@ -5,6 +5,7 @@ from templates.usermanage.usermanage import usermanage
 from templates.feedback.feedback import feedbackbp
 from templates.dashboard.dashboard import dashboardbp, init_mqtt_client
 from templates.devicemanage.devicemanage import devicemanage_bp
+from templates.automationrule.automation import autobp
 from templates.zone.zone import zone_bp
 from flask_login import LoginManager, login_user, logout_user, current_user
 from datetime import timedelta
@@ -18,6 +19,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../database/database.db'  # D
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = "mysecretkey"  
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
+app.config['BROKER_ADDRESS'] = "atechpromqtt"
+app.config['BROKER_PORT'] = 1883
+app.config['MQTT_TOPIC'] = "home/#"
 
 app.register_blueprint(views) 
 app.register_blueprint(usermanage)
@@ -25,7 +29,7 @@ app.register_blueprint(feedbackbp)
 app.register_blueprint(devicemanage_bp)
 app.register_blueprint(dashboardbp)
 app.register_blueprint(zone_bp)
-
+app.register_blueprint(autobp)
 # Initialize the database
 db.init_app(app)
 

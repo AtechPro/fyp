@@ -15,14 +15,11 @@
         <h1 class="dashboard-title">Device Dashboard</h1>
 
         <div class="add-tile-form">
-            <select id="sensorTypeSelect">
-                <option value="temperature">Temperature</option>
-                <option value="humidity">Humidity</option>
-                <!-- Add more sensor types as needed -->
+            <select id="sensorSelect">
+                <option value="" disabled selected>Select a sensor type</option>
             </select>
             <button id="addTileButton">Add Tile</button>
         </div>
-
         <div class="dashboard-grid">
             <!-- Sensor tiles will be dynamically added here -->
         </div>
