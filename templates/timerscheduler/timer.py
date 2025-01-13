@@ -2,9 +2,10 @@ import logging
 import json
 import time
 from flask import Blueprint, jsonify, request, current_app, render_template
-from flask_login import login_required
+from flask_login import login_required, current_user
+from datetime import datetime
 import paho.mqtt.client as mqtt
-from database.database import db, User, Sensor, SensorType
+from database.database import db, User, Sensor, SensorType, timerscheduler
 
 
 # Configure logging
@@ -138,6 +139,8 @@ def fetch_sensor_data():
     
     return fetch_sensor_datatype(sensor_key)
 
+
+
 @timerbp.route('/timer/relay/<device_id>', methods=['GET', 'POST'])
 @login_required
 def control_relay(device_id):
@@ -186,7 +189,142 @@ def control_relay(device_id):
             "error": "Failed to control relay",
             "message": str(e)
         }), 500
-    
+
+@timerbp.route('/timer/sensors/timer_applied', methods=['GET'])
+@login_required
+def fetch_sensor_timer_rules():
+    """
+    Fetch sensors with timer-based rules applied and execute timer-based actions.
+    Checks and applies timer-based automation rules for sensors.
+    """
+    try:
+        current_user_id = current_user.userid
+        current_time = datetime.now()
+        current_day = current_time.strftime('%A').lower()
+
+        # Query to fetch timer-based rules for the current user
+        timer_rules = (
+            db.session.query(
+                timerscheduler,
+                Sensor,
+                SensorType
+            )
+            .join(Sensor, timerscheduler.sensor_id == Sensor.id)
+            .join(SensorType, Sensor.sensor_type_id == SensorType.id)
+            .filter(
+                timerscheduler.user_id == current_user_id,
+                timerscheduler.enabled == True
+            )
+            .all()
+        )
+
+        timer_rules_data = {}
+
+        for timer_rule, sensor, sensor_type in timer_rules:
+            # Check if current time is within the scheduled time range
+            start_time = datetime.strptime(timer_rule.start_time, '%H:%M').time()
+            end_time = datetime.strptime(timer_rule.end_time, '%H:%M').time()
+            current_clock_time = current_time.time()
+
+            # Check if the current day is in the scheduled days
+            scheduled_days = timer_rule.days.lower().split(',')
+            is_day_matched = current_day in scheduled_days
+
+            # Check if current time is within the specified time range
+            is_time_matched = start_time <= current_clock_time <= end_time
+
+            # Determine if the rule should be executed
+            is_rule_matched = is_day_matched and is_time_matched
+
+            if is_rule_matched:
+                try:
+                    # Execute the timer-based action
+                    relay_device_id = timer_rule.relay_device_id
+                    action = timer_rule.action.upper()
+
+                    if action in ['ON', 'OFF']:
+                        response, status_code = control_relay(
+                            device_id=relay_device_id,
+                            request_type='POST',
+                            json_data={'state': action}
+                        )
+
+                        if status_code != 200:
+                            logger.error(f"Failed to execute timer rule: {timer_rule.timer_title}")
+                        else:
+                            logger.info(f"Successfully executed timer rule: {timer_rule.timer_title}")
+
+                except Exception as e:
+                    logger.error(f"Error executing timer rule: {str(e)}")
+
+            # Prepare timer rules data for response
+            sensor_type_key = sensor_type.type_key
+            if sensor_type_key not in timer_rules_data:
+                timer_rules_data[sensor_type_key] = {
+                    "type_display_name": sensor_type.display_name,
+                    "unit": sensor_type.unit,
+                    "sensors": []
+                }
+
+            # Check if sensor already exists in the list
+            sensor_exists = False
+            for existing_sensor in timer_rules_data[sensor_type_key]["sensors"]:
+                if existing_sensor["sensor_id"] == sensor.id:
+                    if "timer_rules" not in existing_sensor:
+                        existing_sensor["timer_rules"] = []
+                    
+                    timer_rule_info = {
+                        "timer_id": timer_rule.id,
+                        "start_time": timer_rule.start_time,
+                        "end_time": timer_rule.end_time,
+                        "days": timer_rule.days,
+                        "action": timer_rule.action,
+                        "relay_device_id": timer_rule.relay_device_id,
+                        "timer_title": timer_rule.timer_title,
+                        "timer_desc": timer_rule.timer_desc,
+                        "is_matched": is_rule_matched,
+                        "status_message": f"Rule {'matched' if is_rule_matched else 'not matched'}: "
+                                          f"Days: {timer_rule.days}, "
+                                          f"Time: {timer_rule.start_time}-{timer_rule.end_time}"
+                    }
+                    existing_sensor["timer_rules"].append(timer_rule_info)
+                    sensor_exists = True
+                    break
+
+            # If sensor doesn't exist, add it
+            if not sensor_exists:
+                sensor_data = {
+                    "device_id": sensor.device_id,
+                    "sensor_key": sensor.sensor_key,
+                    "sensor_id": sensor.id,
+                    "sensor_type_id": sensor.sensor_type_id,
+                    "timer_rules": [{
+                        "timer_id": timer_rule.id,
+                        "start_time": timer_rule.start_time,
+                        "end_time": timer_rule.end_time,
+                        "days": timer_rule.days,
+                        "action": timer_rule.action,
+                        "relay_device_id": timer_rule.relay_device_id,
+                        "timer_title": timer_rule.timer_title,
+                        "timer_desc": timer_rule.timer_desc,
+                        "is_matched": is_rule_matched,
+                        "status_message": f"Rule {'matched' if is_rule_matched else 'not matched'}: "
+                                          f"Days: {timer_rule.days}, "
+                                          f"Time: {timer_rule.start_time}-{timer_rule.end_time}"
+                    }]
+                }
+                timer_rules_data[sensor_type_key]["sensors"].append(sensor_data)
+
+        return jsonify(timer_rules_data), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching timer rules data: {e}")
+        return jsonify({"error": "Failed to fetch timer rules data", "message": str(e)}), 500
+
+
+
+
+
 @timerbp.route('/timer/sensor/<sensor_key>/datatype', methods=['GET'])
 @login_required
 def get_sensor_datatype(sensor_key):
@@ -194,4 +332,4 @@ def get_sensor_datatype(sensor_key):
 
 @timerbp.route('/timer', methods=['GET'])
 def automation():
-    return render_template('automationrule/automation.html')
+    return render_template('timerscheduler/timer.html')

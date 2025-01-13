@@ -459,8 +459,6 @@ def add_automation_rule():
                 "details": str(e)  
             }), 500
 
-
-
 @autobp.route('/automation/rules', methods=['GET'])  
 def get_all_automation_rules():  
     try:  
@@ -482,41 +480,6 @@ def get_all_automation_rules():
             "details": str(e)  
         }), 500
     
-
-@autobp.route('/automation/rules/<int:rule_id>', methods=['GET'])
-def get_automation_rule(rule_id):
-    rule = AutomationRule.query.get_or_404(rule_id)
-    return jsonify(rule.as_dict()), 200
-
-
-@autobp.route('/automation/rules/<int:rule_id>', methods=['PUT'])
-def edit_automation_rule(rule_id):
-    rule = AutomationRule.query.get_or_404(rule_id)
-    data = request.get_json()
-
-    # Update the rule attributes
-    rule.user_id = data.get('user_id', rule.user_id)
-    rule.sensor_id = data.get('sensor_id', rule.sensor_id)
-    rule.sensor_type_id = data.get('sensor_type_id', rule.sensor_type_id)
-    rule.condition = data.get('condition', rule.condition)
-    rule.threshold = data.get('threshold', rule.threshold)
-    rule.relay_device_id = data.get('relay_device_id', rule.relay_device_id)
-    rule.action = data.get('action', rule.action)
-    rule.enabled = data.get('enabled', rule.enabled)
-    rule.auto_title = data.get('auto_title', rule.auto_title)
-    rule.auto_description = data.get('auto_description', rule.auto_description)
-
-    db.session.commit()
-    return jsonify(rule.as_dict()), 200
-
-# Delete Route
-@autobp.route('/automation/rules/<int:rule_id>', methods=['DELETE'])
-def delete_automation_rule(rule_id):
-    rule = AutomationRule.query.get_or_404(rule_id)
-    db.session.delete(rule)
-    db.session.commit()
-    return jsonify({"message": "Rule deleted successfully"}), 200
-
 
 #for debug purposes only do not delete
 @autobp.route('/automation/relay/<device_id>', methods=['GET', 'POST'])

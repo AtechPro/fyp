@@ -189,3 +189,21 @@ class AutomationRule(db.Model):
             "auto_title": self.auto_title,
             "auto_description": self.auto_description,
         }
+    
+class timerscheduler(db.Model):
+    __tablename__ = 'timer_schedulers'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id'), nullable=False)
+    start_time = db.Column(db.String(50), nullable=False)
+    end_time = db.Column(db.String(50), nullable=False)
+    days = db.Column(db.String(50), nullable=False)
+    enabled = db.Column(db.Boolean, default=True)  # Rule is active or not
+    timer_desc = db.Column(db.String(200), nullable=True)  # Auto-generated description
+    timer_title = db.Column(db.String(100), nullable=True)  # Auto-generated title
+    action = db.Column(db.String(10), nullable=False)  # ON or OFF
+    relay_device_id = db.Column(db.String(100), nullable=False)  # Device to control
+
+
+    def __repr__(self):
+        return f"<timerscheduler(id={self.id}, sensor_id={self.sensor_id}, relay_device_id={self.relay_device_id}, action={self.action})>" 
