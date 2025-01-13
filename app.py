@@ -11,6 +11,8 @@ from flask_login import LoginManager, login_user, logout_user, current_user
 from datetime import timedelta
 from flask.sessions import SecureCookieSessionInterface
 import uuid
+from flask_socketio import SocketIO, emit
+
 
 app = Flask(__name__)
 
@@ -22,6 +24,9 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
 app.config['BROKER_ADDRESS'] = "atechpromqtt"
 app.config['BROKER_PORT'] = 1883
 app.config['MQTT_TOPIC'] = "home/#"
+
+socketio = SocketIO(app, cors_allowed_origins="*")  
+
 
 app.register_blueprint(views) 
 app.register_blueprint(usermanage)
@@ -132,6 +137,8 @@ def create_initial_user(app):
 
         # Populate sensor types
         populate_sensor_types()
+
+
 
 @login_manager.user_loader
 def load_user(userid):

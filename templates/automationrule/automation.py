@@ -2,9 +2,12 @@ import logging
 import json
 import time
 from flask import Blueprint, jsonify, request, current_app, render_template
-from flask_login import login_required
+from flask_login import login_required, current_user
 import paho.mqtt.client as mqtt
-from database.database import db, User, Sensor, SensorType
+from database.database import db, User, Sensor, SensorType, AutomationRule
+from datetime import datetime, timedelta
+from threading import Lock
+from flask_socketio import SocketIO, emit
 
 
 # Configure logging
@@ -18,12 +21,13 @@ autobp = Blueprint('autobp', __name__)
 BROKER_ADDRESS = "atechpromqtt"  # Replace with your MQTT broker address
 BROKER_PORT = 1883               # Default MQTT port
 MQTT_TOPIC = "home/#"            # Topic to subscribe to
-
+socketio = SocketIO()
 # MQTT Client
 mqtt_client = mqtt.Client()
 
 # Store the latest sensor data
 last_known_state = {}
+
 
 # Initialize MQTT Client
 def init_mqtt_client():
@@ -72,6 +76,8 @@ def on_message(_client, _userdata, msg):
 # Initialize MQTT client when the module is loaded
 init_mqtt_client()
 
+
+
 def fetch_sensor_datatype(sensor_key): # later will need to show as the sensor type invovled on the reactor (relay)
     """
     Fetch the data type (unit or states) of a sensor based on its sensor_key.
@@ -106,6 +112,98 @@ def fetch_sensor_datatype(sensor_key): # later will need to show as the sensor t
         logger.error(f"Error fetching sensor data type for {sensor_key}: {e}")
         return jsonify({"error": "Failed to fetch sensor data type", "message": str(e)}), 500
 
+def control_relay(device_id, request_type, **kwargs):
+    try:
+        # Check if the device is registered in the database
+        device = Sensor.query.filter_by(device_id=device_id).first()
+        if not device:
+            return {"error": f"Device {device_id} is not registered"}, 404
+
+        # Handle GET and POST requests differently
+        if request_type == 'GET':
+            args = kwargs.get('args', {})
+            command = args.get('state', '').upper()  # Get command from query parameters
+        elif request_type == 'POST':
+            json_data = kwargs.get('json_data', {})
+            if not json_data or 'state' not in json_data:
+                return {"error": "Invalid request. 'state' is required."}, 400
+            command = json_data['state'].upper()
+        else:
+            return {"error": "Invalid request type. Use 'GET' or 'POST'."}, 400
+
+        # Validate the command
+        if command not in ['ON', 'OFF']:
+            return {"error": "Invalid command. Use 'ON' or 'OFF'."}, 400
+
+        # Publish command to MQTT topic
+        mqtt_topic = f"home/{device_id}/relay/command"
+        mqtt_client.publish(mqtt_topic, command)
+        
+        # Log the action
+        logger.info(f"Relay {device_id} set to {command}")
+
+        # Return success response
+        return {
+            "message": f"Relay {device_id} set to {command}",
+            "command": command
+        }, 200
+
+    except Exception as e:
+        logger.error(f"Error controlling relay {device_id}: {str(e)}")
+        return {"error": str(e)}, 500
+
+global_sensor_data = {}
+sensor_data_lock = Lock()
+
+def fetch_and_categorize_sensor_data():
+    """Fetch and categorize sensor data from the database."""
+    global global_sensor_data, sensor_data_lock
+
+    try:
+        # Fetch all registered sensors and their types from the database
+        sensors = (
+            db.session.query(
+                Sensor.id,
+                Sensor.device_id,
+                Sensor.sensor_key,
+                Sensor.sensor_type_id,
+                SensorType.type_key,
+                SensorType.display_name,
+                SensorType.unit,
+                SensorType.states,
+            )
+            .join(SensorType, Sensor.sensor_type_id == SensorType.id)
+            .all()
+        )
+
+        # Categorize sensors by their type
+        categorized_data = {}
+        for sensor in sensors:
+            sensor_type = sensor.type_key
+            if sensor_type not in categorized_data:
+                categorized_data[sensor_type] = {
+                    "type_display_name": sensor.display_name,
+                    "unit": sensor.unit,
+                    "states": sensor.states,
+                    "sensors": [],
+                }
+            categorized_data[sensor_type]["sensors"].append({
+                "device_id": sensor.device_id,
+                "sensor_key": sensor.sensor_key,
+                "last_value": last_known_state.get(sensor.device_id, {}).get("data", {}).get(sensor.sensor_key),
+                "sensor_id": sensor.id,
+                "sensor_type_id": sensor.sensor_type_id,
+            })
+
+        # Update global sensor data with thread safety
+        with sensor_data_lock:
+            global_sensor_data = categorized_data
+
+    except Exception as e:
+        logger.error(f"Error fetching sensor data: {e}")
+        raise  # Re-raise the exception to handle it in the calling function
+
+
 @autobp.route('/automation/sensors', methods=['GET'])
 @login_required
 def fetch_sensor_data():
@@ -114,80 +212,289 @@ def fetch_sensor_data():
         if not last_known_state:
             return jsonify({"message": "No sensor data available"}), 200
 
-        # Fetch all registered device IDs from the database
-        registered_devices = Sensor.query.with_entities(Sensor.device_id).distinct().all()
-        registered_device_ids = {device.device_id for device in registered_devices}
+        # Fetch and categorize sensor data
+        fetch_and_categorize_sensor_data()
 
-        # Filter the last_known_state to only include registered devices
-        filtered_data = {
-            device_id: details
-            for device_id, details in last_known_state.items()
-            if device_id in registered_device_ids
-        }
-
-        # If no registered devices are found in the MQTT data
-        if not filtered_data:
-            return jsonify({"message": "No data available for registered devices"}), 200
-
-        # Return the filtered sensor data
-        return jsonify(filtered_data), 200
+        # Return categorized sensor data
+        with sensor_data_lock:
+            return jsonify(global_sensor_data), 200
 
     except Exception as e:
         logger.error(f"Error fetching sensor data: {e}")
         return jsonify({"error": "Failed to fetch sensor data", "message": str(e)}), 500
     
-    return fetch_sensor_datatype(sensor_key)
+@autobp.route('/automation/sensors/rule_applied', methods=['GET'])  
+@login_required  
+def fetch_sensor_rules_applied():  
+    """  
+    Fetch only sensors that have automation rules applied and their matching status.  
+    Executes automation rules when conditions are met.  
+    """  
+    # Module level variables for rule execution tracking  
+    last_rule_execution = {}  
 
-@autobp.route('/automation/relay/<device_id>', methods=['GET', 'POST'])
-@login_required
-def control_relay(device_id):
-    try:
-        # Check if the device is registered in the database
-        device = Sensor.query.filter_by(device_id=device_id).first()
-        if not device:
-            return jsonify({"error": f"Device {device_id} is not registered"}), 404
-
-        # Handle GET and POST requests differently
-        if request.method == 'GET':
-            command = request.args.get('state', '').upper()  # Get command from query parameters
-        else:
-            data = request.get_json()  # Get command from JSON payload
-            if not data or 'state' not in data:
-                return jsonify({"error": "Invalid request. 'state' is required."}), 400
-            command = data['state'].upper()
-
-        # Validate the command
-        if command not in ['ON', 'OFF']:
-            return jsonify({"error": "Invalid command. Use 'ON' or 'OFF'."}), 400
-
-        # Publish command to MQTT topic
-        mqtt_topic = f"home/{device_id}/relay/command"
-        result = mqtt_client.publish(mqtt_topic, command)
+    def should_execute_rule(rule_id, debounce_seconds=60):  
+        """Check if enough time has passed since the last rule execution"""  
+        current_time = datetime.now()  
+        last_execution = last_rule_execution.get(rule_id)  
         
-        # Log the action
-        logger.info(f"Relay {device_id} set to {command}")
+        if last_execution is None or (current_time - last_execution) > timedelta(seconds=debounce_seconds):  
+            last_rule_execution[rule_id] = current_time  
+            return True  
+        return False  
 
-        # Return success response
-        return jsonify({
-            "message": f"Relay {device_id} set to {command}",
-            "command": command
-        }), 200 
+    def execute_automation_rule(rule_info, is_matched):  
+        """Execute automation rule based on the matching condition with debouncing"""  
+        if not rule_info['enabled']:  
+            return  
+            
+        try:  
+            rule_id = rule_info['rule_id']  
+            
+            if not should_execute_rule(rule_id):  
+                logger.debug(f"Skipping rule execution due to debounce: {rule_info['auto_title']}")  
+                return  
+                
+            relay_device_id = rule_info['relay_device_id']  
+            action = rule_info['action'].upper()  
+            
+            if is_matched and action in ['ON', 'OFF']:  
+                response, status_code = control_relay(  
+                    device_id=relay_device_id,  
+                    request_type='POST',  
+                    json_data={'state': action}  
+                )  
+                
+                if status_code != 200:  
+                    logger.error(f"Failed to execute automation rule: {response.get('error', 'Unknown error')}")  
+                else:  
+                    logger.info(f"Successfully executed automation rule: {rule_info['auto_title']}")  
+                    
+        except Exception as e:  
+            logger.error(f"Error executing automation rule: {str(e)}")  
 
-    except Exception as e:
-        logger.error(f"Error controlling relay for device {device_id}: {str(e)}")
-        return jsonify({
-            "error": "Failed to control relay",
-            "message": str(e)
-        }), 500
+    def check_rule_match(value, condition, threshold):  
+        """Helper function to check if a value matches a rule's condition"""  
+        try:  
+            if value is None:  
+                return False  
+                
+            # Handle numeric comparisons  
+            if isinstance(value, (int, float)) and threshold.replace('.', '').isdigit():  
+                numeric_value = float(value)  
+                numeric_threshold = float(threshold)  
+                
+                if condition == 'GREATER_THAN':  
+                    return numeric_value > numeric_threshold  
+                elif condition == 'LESS_THAN':  
+                    return numeric_value < numeric_threshold  
+                elif condition == 'EQUALS':  
+                    return numeric_value == numeric_threshold  
+                    
+            # Handle string/state comparisons  
+            else:  
+                str_value = str(value).lower()  
+                str_threshold = str(threshold).lower()  
+                
+                if condition == 'EQUALS':  
+                    return str_value == str_threshold  
+                    
+            return False  
+            
+        except (ValueError, TypeError):  
+            return False  
 
-    except Exception as e:
-        logger.error(f"Error controlling relay for device {device_id}: {str(e)}")
-        return jsonify({
-            "error": "Failed to control relay",
-            "message": str(e)
+    try:  
+        if not last_known_state:  
+            return jsonify({"message": "No sensor data available"}), 200  
+
+        current_user_id = current_user.userid  
+
+        with sensor_data_lock:  
+            sensor_rules_data = {}  
+            
+            # Modified query to only fetch sensors with active rules  
+            sensor_rules = (  
+                db.session.query(  
+                    Sensor.id,  
+                    Sensor.device_id,  
+                    Sensor.sensor_key,  
+                    Sensor.sensor_type_id,  
+                    SensorType.type_key,  
+                    SensorType.display_name,  
+                    SensorType.unit,  
+                    SensorType.states,  
+                    AutomationRule.id.label('rule_id'),  
+                    AutomationRule.condition,  
+                    AutomationRule.threshold,  
+                    AutomationRule.relay_device_id,  
+                    AutomationRule.action,  
+                    AutomationRule.enabled,  
+                    AutomationRule.auto_title,  
+                    AutomationRule.auto_description  
+                )  
+                .join(SensorType, Sensor.sensor_type_id == SensorType.id)  
+                .join(  # Changed from outerjoin to join to only get sensors with rules  
+                    AutomationRule,  
+                    db.and_(  
+                        Sensor.id == AutomationRule.sensor_id,  
+                        AutomationRule.user_id == current_user_id  
+                    )  
+                )  
+                .all()  
+            )  
+
+            # Process only sensors with rules  
+            for sensor in sensor_rules:  
+                sensor_type = sensor.type_key  
+                if sensor_type not in sensor_rules_data:  
+                    sensor_rules_data[sensor_type] = {  
+                        "type_display_name": sensor.display_name,  
+                        "unit": sensor.unit,  
+                        "states": sensor.states,  
+                        "sensors": [],  
+                    }  
+
+                current_value = last_known_state.get(sensor.device_id, {}).get("data", {}).get(sensor.sensor_key)  
+
+                # Check if the rule conditions are currently matched  
+                is_matched = check_rule_match(current_value, sensor.condition, sensor.threshold)  
+                
+                # Create a human-readable status message  
+                status_message = (  
+                    f"Current value ({current_value}) "  
+                    f"{'matches' if is_matched else 'does not match'} "  
+                    f"condition: {sensor.condition} {sensor.threshold}"  
+                )  
+
+                rule_info = {  
+                    "rule_id": sensor.rule_id,  
+                    "condition": sensor.condition,  
+                    "threshold": sensor.threshold,  
+                    "relay_device_id": sensor.relay_device_id,  
+                    "action": sensor.action,  
+                    "enabled": sensor.enabled,  
+                    "auto_title": sensor.auto_title,  
+                    "auto_description": sensor.auto_description,  
+                    "is_matched": is_matched,  
+                    "status_message": status_message  
+                }  
+                
+                # Execute the automation rule if conditions are met  
+                execute_automation_rule(rule_info, is_matched)  
+
+                # Check if sensor already exists in the list  
+                sensor_exists = False  
+                for existing_sensor in sensor_rules_data[sensor_type]["sensors"]:  
+                    if existing_sensor["sensor_id"] == sensor.id:  
+                        if "rules" not in existing_sensor:  
+                            existing_sensor["rules"] = []  
+                        existing_sensor["rules"].append(rule_info)  
+                        sensor_exists = True  
+                        break  
+
+                # If sensor doesn't exist, add it  
+                if not sensor_exists:  
+                    sensor_data = {  
+                        "device_id": sensor.device_id,  
+                        "sensor_key": sensor.sensor_key,  
+                        "last_value": current_value,  
+                        "sensor_id": sensor.id,  
+                        "sensor_type_id": sensor.sensor_type_id,  
+                        "rules": [rule_info]  
+                    }  
+                    sensor_rules_data[sensor_type]["sensors"].append(sensor_data)  
+
+            return jsonify(sensor_rules_data), 200  
+
+    except Exception as e:  
+        logger.error(f"Error fetching sensor rules data: {e}")  
+        return jsonify({"error": "Failed to fetch sensor rules data", "message": str(e)}), 500
+    
+
+
+@autobp.route('/automation/rule/add', methods=['GET', 'POST'])  
+def add_automation_rule():  
+    if request.method == 'GET':  
+        return jsonify({  
+            "message": "Send a POST request with JSON data to add a new automation rule."  
+        }), 200  
+
+    elif request.method == 'POST':  
+        try:  
+            data = request.get_json()  
+
+            required_fields = [  
+                'sensor_id', 'sensor_type_id', 'condition', 'threshold',  # Fixed typo here  
+                'relay_device_id', 'action'  
+            ]  
+            for field in required_fields:  
+                if field not in data:  
+                    return jsonify({  
+                        "error": f"Missing required field: {field}"  
+                    }), 400  
+
+            new_rule = AutomationRule(  
+                user_id=data.get('user_id', 1),  
+                sensor_id=data['sensor_id'],  
+                sensor_type_id=data['sensor_type_id'],  
+                condition=data['condition'],  
+                threshold=data['threshold'],  
+                relay_device_id=data['relay_device_id'],  
+                action=data['action'],  
+                enabled=data.get('enabled', True),  
+                auto_title=data.get('auto_title'),  
+                auto_description=data.get('auto_description'),  
+            )  
+
+            db.session.add(new_rule)  
+            db.session.commit()  
+
+            return jsonify({  
+                "message": "Automation rule added successfully!",  
+                "rule_id": new_rule.id  
+            }), 201  
+
+        except Exception as e:  
+            db.session.rollback()  
+            return jsonify({  
+                "error": "Failed to add automation rule.",  
+                "details": str(e)  
+            }), 500
+
+@autobp.route('/automation/rules', methods=['GET'])  
+def get_all_automation_rules():  
+    try:  
+        # Query all rules from the database  
+        rules = AutomationRule.query.all()  
+        
+        # Convert rules to list of dictionaries using the as_dict method  
+        rules_list = [rule.as_dict() for rule in rules]  
+        
+        return jsonify({  
+            "message": "Successfully retrieved automation rules",  
+            "count": len(rules_list),  
+            "rules": rules_list  
+        }), 200  
+        
+    except Exception as e:  
+        return jsonify({  
+            "error": "Failed to retrieve automation rules",  
+            "details": str(e)  
         }), 500
     
-@autobp.route('/automation/sensor/<sensor_key>/datatype', methods=['GET'])
+    
+#for debug purposes only do not delete
+@autobp.route('/automation/relay/<device_id>', methods=['GET', 'POST'])
+@login_required
+def relay_route(device_id):
+    if request.method == 'GET':
+        return jsonify(*control_relay(device_id, 'GET', args=request.args))
+    elif request.method == 'POST':
+        return jsonify(*control_relay(device_id, 'POST', json_data=request.get_json()))
+
+
+@autobp.route('/automation/sensor/datatype/<sensor_key>', methods=['GET'])
 @login_required
 def get_sensor_datatype(sensor_key):
     return fetch_sensor_datatype(sensor_key)
@@ -195,3 +502,5 @@ def get_sensor_datatype(sensor_key):
 @autobp.route('/automation', methods=['GET'])
 def automation():
     return render_template('automationrule/automation.html')
+
+

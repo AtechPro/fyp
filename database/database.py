@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import JSON
 
 db = SQLAlchemy()
 
@@ -19,6 +20,8 @@ class User(db.Model, UserMixin):
     devices = db.relationship('Device', cascade='all, delete-orphan', backref='user', lazy=True)
     sensors = db.relationship('Sensor', cascade='all, delete-orphan', backref='user', lazy=True)
     zones = db.relationship('Zone', cascade='all, delete-orphan', backref='user', lazy=True)
+    automation_rules = db.relationship('AutomationRule', cascade='all, delete-orphan', backref='user', lazy=True)
+
 
     def get_id(self):
         return str(self.userid)
@@ -63,11 +66,12 @@ class Sensor(db.Model):
     status = db.Column(db.String(20), default='online')
     last_seen = db.Column(db.DateTime, default=datetime.now)
     userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=False)
+    
 
     # Relationships
     device = db.relationship('Device', backref=db.backref('sensor_list', cascade='all, delete-orphan', lazy=True))
     sensor_type = db.relationship('SensorType', backref=db.backref('sensors', lazy=True))
-
+    automation_rules = db.relationship('AutomationRule', backref=db.backref('sensor', lazy=True), cascade='all, delete-orphan')
     def __repr__(self):
         return f"<Sensor {self.sensor_key} of Device {self.device_id}>"
 
@@ -155,25 +159,33 @@ class DashboardTile(db.Model):
 
 class AutomationRule(db.Model):
     __tablename__ = 'automation_rules'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id', ondelete='CASCADE'), nullable=False)
-    threshold = db.Column(db.Float, nullable=False)
-    relay_device_id = db.Column(db.String(50), nullable=False)
-    relay_state = db.Column(db.String(10), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
 
-    # Relationships
-    sensor = db.relationship('Sensor', backref=db.backref('automation_rules', cascade='all, delete-orphan', lazy=True))
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id'), nullable=False)
+    sensor_type_id = db.Column(db.Integer, db.ForeignKey('sensor_types.id'), nullable=False)
+    condition = db.Column(db.String(50), nullable=False)  # GREATER_THAN, LESS_THAN, EQUALS
+    threshold = db.Column(db.String(100), nullable=False)  # Threshold value or state
+    relay_device_id = db.Column(db.String(100), nullable=False)  # Device to control
+    action = db.Column(db.String(10), nullable=False)  # ON or OFF
+    enabled = db.Column(db.Boolean, default=True)  # Rule is active or not
+    auto_description = db.Column(db.String(200), nullable=True)  # Auto-generated description
+    auto_title = db.Column(db.String(100), nullable=True)  # Auto-generated title
 
     def __repr__(self):
-        return f"<AutomationRule {self.sensor_id} {self.threshold} {self.relay_device_id} {self.relay_state}>"
-
-    def is_applicable(self):
-        """Check if the sensor type is suitable for automation."""
-        sensor_type = SensorType.query.get(self.sensor.sensor_type_id)
-        if sensor_type.states:
-            # For binary sensors, check if the threshold is within the states
-            return str(self.threshold) in sensor_type.states
-        else:
-            # For continuous sensors, any threshold is applicable
-            return True
+        return f"<AutomationRule(id={self.id}, sensor_id={self.sensor_id}, relay_device_id={self.relay_device_id}, action={self.action})>"
+    
+    def as_dict(self):
+        return {
+            "rule_id": self.id,
+            "user_id": self.user_id,
+            "sensor_id": self.sensor_id,
+            "sensor_type_id": self.sensor_type_id,
+            "condition": self.condition,
+            "threshold": self.threshold,
+            "relay_device_id": self.relay_device_id,
+            "action": self.action,
+            "enabled": self.enabled,
+            "auto_title": self.auto_title,
+            "auto_description": self.auto_description,
+        }
