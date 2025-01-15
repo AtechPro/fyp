@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Scheduler</title>
+    <link rel="stylesheet" href="/static/timerschedule/scheduler.css">
+    <script src="/static/timerschedule/scheduler.js"></script>
+</head>
+<body>
+    <h1>Scheduler</h1>
+
+    <nav class="sidebar">
+        {% include 'navigation/nav.html' %}
+    </nav>
+    <!-- Form to Add Timer Schedule -->
+    <form id="timerForm">
+
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title"><br><br>
+
+        <label for="description">Description:</label>
+        <textarea id="description" name="description"></textarea><br><br>
+
+        <label for="trigger_time">Trigger Time (HH:MM):</label>
+        <input type="time" id="trigger_time" name="trigger_time" required><br><br>
+
+        <label>Days:</label>
+        <div>
+            <input type="checkbox" id="monday" name="days" value="Mon">
+            <label for="monday">Monday</label>
+            <input type="checkbox" id="tuesday" name="days" value="Tue">
+            <label for="tuesday">Tuesday</label>
+            <input type="checkbox" id="wednesday" name="days" value="Wed">
+            <label for="wednesday">Wednesday</label>
+            <input type="checkbox" id="thursday" name="days" value="Thu">
+            <label for="thursday">Thursday</label>
+            <input type="checkbox" id="friday" name="days" value="Fri">
+            <label for="friday">Friday</label>
+            <input type="checkbox" id="saturday" name="days" value="Sat">
+            <label for="saturday">Saturday</label>
+            <input type="checkbox" id="sunday" name="days" value="Sun">
+            <label for="sunday">Sunday</label>
+        </div><br>
+
+        <label for="action">Action:</label>
+        <select id="action" name="action" required>
+            <option value="ON">ON</option>
+            <option value="OFF">OFF</option>
+        </select><br><br>
+
+        <label for="relay_device_id">Relay Device ID:</label>
+            <select id="relay_device_id" name="relay_device_id" required>
+                <option value="">Select a Relay Device</option>
+                <!-- Relay options will be populated here -->
+            </select><br><br>
+
+        <label for="enabled">Enabled:</label>
+        <input type="checkbox" id="enabled" name="enabled" checked><br><br>
+
+        
+        <button type="submit">Add Timer Schedule</button>
+    </form>
+
+    <hr>
+
+    <!-- Section to Display Existing Timers -->
+    <h2>Existing Timer Schedules</h2>
+    <div id="timerList">
+        <!-- Timer list will be populated here -->
+    </div>
+
+    <script>
+        // Placeholder for JavaScript logic to handle form submission and fetching timers
+    </script>
+</body>
+</html>

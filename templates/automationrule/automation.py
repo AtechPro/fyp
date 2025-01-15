@@ -222,23 +222,37 @@ def fetch_sensor_data():
     except Exception as e:
         logger.error(f"Error fetching sensor data: {e}")
         return jsonify({"error": "Failed to fetch sensor data", "message": str(e)}), 500
-    
+
+last_rule_execution = {}
+last_refresh_time = datetime.now()
+refresh_lock = Lock()
+REFRESH_INTERVAL = 30  # Refresh interval in seconds
+
 @autobp.route('/automation/sensors/rule_applied', methods=['GET'])  
 @login_required  
 def fetch_sensor_rules_applied():  
-    
-    # Module level variables for rule execution tracking  
-    last_rule_execution = {}  
+    global last_rule_execution, last_refresh_time
 
     def should_execute_rule(rule_id, debounce_seconds=60):  
         """Check if enough time has passed since the last rule execution"""  
         current_time = datetime.now()  
-        last_execution = last_rule_execution.get(rule_id)  
-        
-        if last_execution is None or (current_time - last_execution) > timedelta(seconds=debounce_seconds):  
-            last_rule_execution[rule_id] = current_time  
-            return True  
-        return False  
+        with refresh_lock:
+            last_execution = last_rule_execution.get(rule_id)  
+            
+            if last_execution is None or (current_time - last_execution) > timedelta(seconds=debounce_seconds):  
+                last_rule_execution[rule_id] = current_time  
+                return True  
+            return False  
+
+    def refresh_last_rule_execution():
+        """Refresh the last_rule_execution dictionary if the refresh interval has passed"""
+        global last_refresh_time
+        current_time = datetime.now()
+        with refresh_lock:
+            if (current_time - last_refresh_time) > timedelta(seconds=REFRESH_INTERVAL):
+                last_rule_execution.clear()
+                last_refresh_time = current_time
+                logger.debug("Refreshed last_rule_execution dictionary")
 
     def execute_automation_rule(rule_info, is_matched):  
         """Execute automation rule based on the matching condition with debouncing"""  
@@ -341,6 +355,9 @@ def fetch_sensor_rules_applied():
                 .all()  
             )  
 
+            # Refresh the last_rule_execution dictionary if needed
+            refresh_last_rule_execution()
+
             # Process only sensors with rules  
             for sensor in sensor_rules:  
                 sensor_type = sensor.type_key  
@@ -432,7 +449,7 @@ def add_automation_rule():
                     }), 400  
 
             new_rule = AutomationRule(  
-                user_id=data.get('user_id', 1),  
+                user_id=current_user.userid,  
                 sensor_id=data['sensor_id'],  
                 sensor_type_id=data['sensor_type_id'],  
                 condition=data['condition'],  

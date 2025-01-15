@@ -69,8 +69,8 @@ class SensorConfigManager {
                 unit: 'N/A',
                 type: 'status',
                 states: {
-                    'ON': { label: 'Active', color: 'green', icon: '⚡' },
-                    'OFF': { label: 'Inactive', color: 'gray', icon: '❌' }
+                    'ON': { label: 'ON', color: 'green', icon: '⚡' },
+                    'OFF': { label: 'OFF', color: 'gray', icon: '❌' }
                 },
                 color: '#FFA500',
                 maxDataPoints: 10,
@@ -235,7 +235,7 @@ class TileRenderer {
                 toggleButton.dataset.state = newState;
                 const valueElement = document.getElementById(`${deviceId}_${sensorId}_${sensorType}Value`);
                 if (valueElement) {
-                    valueElement.textContent = newState === 'ON' ? 'Active' : 'Inactive';
+                    valueElement.textContent = newState === 'ON' ? 'ON' : 'OFF';
                 }
     
                 // Hide the error message if previously shown

@@ -1,5 +1,6 @@
 body {
     font-family: Arial, sans-serif;
+    margin: 0; /* Remove default body margin */
 }
 
 .sidebar {
@@ -12,7 +13,6 @@ body {
     color: #fff;
     padding: 20px;
 }
-
 
 .navbar-links {
     list-style-type: none; /* Removes bullets from list */
@@ -34,4 +34,10 @@ body {
 .navbar-links a:hover {
     background-color: #444; /* Changes background on hover */
     text-decoration: none; /* Keep no underline on hover */
+}
+
+.container-fluid {
+    padding-left: 270px; /* 250px for sidebar + 20px padding */
+    width: 100%;
+    box-sizing: border-box; /* Ensures padding is included in the width */
 }

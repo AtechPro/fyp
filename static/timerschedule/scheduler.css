@@ -1,0 +1,58 @@
+/* styles.css */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column; /* Stack elements vertically */
+    align-items: center; /* Center elements horizontally */
+}
+
+.sidebar {
+    position: fixed; /* Fix the sidebar in place */
+    left: 0;
+    top: 0;
+    width: 250px; /* Set the width of the sidebar */
+    height: 100%; /* Make the sidebar span the full height of the viewport */
+    background-color: #f4f4f4; /* Optional: Add a background color to the sidebar */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+    padding: 20px; /* Optional: Add padding inside the sidebar */
+    box-sizing: border-box; /* Ensure padding doesn't affect the width */
+}
+
+h1, h2 {
+    margin: 20px 0; /* Add margin to headings */
+}
+
+form {
+    margin-bottom: 20px; /* Add some margin below the form */
+}
+
+label {
+    display: block; /* Make labels block elements for better spacing */
+    margin: 10px 0 5px; /* Add margin for labels */
+}
+
+input[type="text"],
+input[type="time"],
+textarea,
+select {
+    width: 100%; /* Make inputs and textarea full width */
+    padding: 8px; /* Add padding for better appearance */
+    margin-bottom: 10px; /* Add margin below inputs */
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+button {
+    padding: 10px 15px; /* Add padding to the button */
+    cursor: pointer; /* Change cursor to pointer on hover */
+    background-color: #007BFF; /* Optional: Add a background color */
+    color: #fff; /* Optional: Add a text color */
+    border: none; /* Remove border */
+    border-radius: 4px; /* Optional: Add rounded corners */
+}
+
+button:hover {
+    background-color: #0056b3; /* Optional: Darken button on hover */
+}

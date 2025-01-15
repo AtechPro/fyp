@@ -190,20 +190,34 @@ class AutomationRule(db.Model):
             "auto_description": self.auto_description,
         }
     
-class timerscheduler(db.Model):
-    __tablename__ = 'timer_schedulers'
+class TimerScheduler(db.Model):
+    __tablename__ = 'timer_schedulers' 
+    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.userid'), nullable=False)
-    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id'), nullable=False)
-    start_time = db.Column(db.String(50), nullable=False)
-    end_time = db.Column(db.String(50), nullable=False)
-    days = db.Column(db.String(50), nullable=False)
-    enabled = db.Column(db.Boolean, default=True)  # Rule is active or not
-    timer_desc = db.Column(db.String(200), nullable=True)  # Auto-generated description
-    timer_title = db.Column(db.String(100), nullable=True)  # Auto-generated title
-    action = db.Column(db.String(10), nullable=False)  # ON or OFF
-    relay_device_id = db.Column(db.String(100), nullable=False)  # Device to control
-
+    trigger_time = db.Column(db.String(50), nullable=False)  # Time of day (e.g., "08:00")
+    days = db.Column(db.String(50), nullable=False)  # Days of the week (e.g., "Monday,Wednesday")
+    enabled = db.Column(db.Boolean, default=True, nullable=False)  # Rule active status
+    description = db.Column(db.String(200), nullable=True)  # Optional description
+    title = db.Column(db.String(100), nullable=True)  # Optional title
+    action = db.Column(db.Enum('ON', 'OFF'), nullable=False)  # Action to perform (ON or OFF)
+    relay_device_id = db.Column(db.String(100), nullable=False)  # Target device ID
 
     def __repr__(self):
-        return f"<timerscheduler(id={self.id}, sensor_id={self.sensor_id}, relay_device_id={self.relay_device_id}, action={self.action})>" 
+        return (f"<TimerScheduler(id={self.id}, user_id={self.user_id}, relay_device_id={self.relay_device_id}, "
+                f"action={self.action}, trigger_time={self.trigger_time}, days={self.days}, "
+                f"enabled={self.enabled})>")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'trigger_time': self.trigger_time,
+            'days': self.days,
+            'enabled': self.enabled,
+            'description': self.description,
+            'title': self.title,
+            'action': self.action,
+            'relay_device_id': self.relay_device_id
+        }
+
