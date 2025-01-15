@@ -106,20 +106,13 @@ class TileRenderer {
         this.tiles = {};
     }
 
-    createSensorTiles(sensorData) {
-        sensorData.forEach(sensor => {
-            const { device_id, sensor_id, sensor_key } = sensor;
-            this.createSingleTile(sensor_key, device_id, sensor_id);
-        });
-    }
-
-    createSingleTile(sensorType, deviceId, sensorId) {
+    createSingleTile(sensorType, deviceId, sensorId, dashboardSensorId) {
         const config = this.configManager.getSensorConfig(sensorType);
         if (!config) {
             console.warn(`No configuration found for sensor type: ${sensorType}`);
             return null;
         }
-
+    
         const tileId = `${deviceId}_${sensorId}_${sensorType}Tile`;
         
         // Prevent duplicate tiles
@@ -127,40 +120,93 @@ class TileRenderer {
             console.warn(`Tile for ${sensorType} already exists`);
             return this.tiles[tileId];
         }
-
+    
         const tile = document.createElement('div');
         tile.classList.add('dashboard-tile', `tile-${sensorType}`);
         tile.id = tileId;
+    
+        // Store necessary data attributes
         tile.dataset.sensorType = sensorType;
         tile.dataset.deviceId = deviceId;
         tile.dataset.sensorId = sensorId;
-
+        tile.dataset.dashboardSensorId = dashboardSensorId;  // Store the dashboard sensor id
+    
+        // Generate tile content (using your generateTileContent function)
         tile.innerHTML = this.generateTileContent(sensorType, config, deviceId, sensorId);
         this.container.appendChild(tile);
-
+    
         // Add control button for controllable sensors
         if (config.controllable) {
             this.addControlButton(tile, sensorType, deviceId, sensorId);
         }
-
+    
         // Initialize chart if needed
         if (config.type === 'chart') {
             this.initializeChart(sensorType, config, deviceId, sensorId);
         }
+    
+        
+        const deleteIcon = tile.querySelector('.delete-icon');
+        if (deleteIcon) {
+            // Set the dashboard_sensor_id as a data attribute
+            const dashboardSensorId = tile.dataset.dashboardSensorId; // Get the dashboard_sensor_id from the tile dataset
+            deleteIcon.setAttribute('data-dashboard-sensor-id', dashboardSensorId);
 
+            // Add click event listener for the delete icon
+            deleteIcon.addEventListener('click', async () => {
+                const clickedDashboardSensorId = deleteIcon.getAttribute('data-dashboard-sensor-id');
+                console.log(`Delete clicked for Dashboard Sensor ID: ${clickedDashboardSensorId}`);
+                
+                try {
+                    const response = await fetch(`/dashboard/remove_sensor/${clickedDashboardSensorId}`, {
+                        method: 'DELETE',
+                    });
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        console.log(data.message); // Success message
+                        // Remove the tile from DOM
+                        tile.remove();
+                    } else {
+                        console.error('Error:', data.message); // Error handling
+                    }
+                } catch (error) {
+                    console.error('Error deleting sensor:', error);
+                }
+            });
+        }
+
+    
         this.tiles[tileId] = tile;
         return tile;
     }
+    
+
+    // Function to handle tile removal (delete)
+    removeTile(dashboardSensorId) {
+        // Find the tile by dashboard_sensor_id
+        const tile = Object.values(this.tiles).find(t => t.dataset.dashboardSensorId === dashboardSensorId);
+        if (tile) {
+            tile.remove();
+            delete this.tiles[tile.id];  // Remove tile from tiles object
+            console.log(`Tile with Dashboard Sensor ID: ${dashboardSensorId} removed`);
+        }
+    }
+    
 
     generateTileContent(sensorType, config, deviceId, sensorId) {
         const formattedName = this.configManager.formatSensorName(sensorType);
         const valueId = `${deviceId}_${sensorId}_${sensorType}Value`;
         const iconId = `${deviceId}_${sensorId}_${sensorType}Icon`;
 
+        // Add a delete icon
+        const deleteIcon = `<span class="delete-icon" style="cursor: pointer; float: right;">🗑️</span>`;
+
         if (config.type === 'chart') {
             return `
                 <div class="tile-header">
                     <h3>${formattedName} (${deviceId})</h3>
+                    ${deleteIcon}
                 </div>
                 <div class="tile-content">
                     <canvas id="${deviceId}_${sensorId}_${sensorType}Chart"></canvas>
@@ -175,6 +221,7 @@ class TileRenderer {
         return `
             <div class="tile-header">
                 <h3>${formattedName} (${deviceId})</h3>
+                ${deleteIcon}
             </div>
             <div class="tile-content">
                 <span id="${iconId}" class="tile-icon"></span>
@@ -356,14 +403,11 @@ class DataManager {
     constructor(tileRenderer, configManager) {
         this.tileRenderer = tileRenderer;
         this.configManager = configManager;
-
-        // Setup relay control event listener
-        document.addEventListener('relay-control', this.handleRelayControl.bind(this));
     }
 
     async fetchCategorizedSensors() {
         try {
-            const response = await fetch('/dashboard/categorize_sensors');
+            const response = await fetch('/dashboard/dashboardsensor');
             if (!response.ok) {
                 console.error(`Failed to fetch categorized sensors. HTTP Status: ${response.status}`);
                 return;
@@ -377,17 +421,84 @@ class DataManager {
     }
 
     processCategorizedSensors(categorizedData) {
+        // Loop through each sensor category (grouped by sensor_key)
         Object.keys(categorizedData).forEach(category => {
             const sensors = categorizedData[category];
+            
+            // Loop through each sensor data point within the category
             sensors.forEach(sensor => {
-                const config = this.configManager.getSensorConfig(sensor.sensor_key);
+                const { dashboard_sensor_id, sensor_id, device_id, sensor_key, value } = sensor;
+    
+                if (!dashboard_sensor_id) {
+                    console.warn(`Missing dashboard_sensor_id for sensor_id: ${sensor_id} in category: ${category}`);
+                    return; // Skip this sensor if it doesn't have a dashboard_sensor_id
+                }
+    
+                // Find the configuration for the sensor (if available)
+                const config = this.configManager.getSensorConfig(sensor_key);
+    
                 if (config) {
-                    this.tileRenderer.createSingleTile(sensor.sensor_key, sensor.device_id, sensor.sensor_id);
-                    this.tileRenderer.updateSensorDisplay(sensor.sensor_key, sensor.value, config, sensor.device_id, sensor.sensor_id);
+                    // Ensure device_id and sensor_id are strings for consistency
+                    const deviceIdStr = String(device_id);
+                    const sensorIdStr = String(sensor_id);
+    
+                    // Create or update the tile for this sensor
+                    const tile = this.tileRenderer.createSingleTile(sensor_key, deviceIdStr, sensorIdStr, dashboard_sensor_id);
+                    
+                    // Store the dashboard sensor id in the tile for future reference
+                    const tileKey = `${deviceIdStr}_${sensorIdStr}_${sensor_key}Tile`;
+                    if (tile) {
+                        tile.dataset.dashboardSensorId = dashboard_sensor_id; // Store the dashboard_sensor_id
+                    }
+    
+                    // Update the display with the latest sensor value
+                    this.tileRenderer.updateSensorDisplay(sensor_key, value, config, deviceIdStr, sensorIdStr);
+                } else {
+                    console.warn(`No configuration found for sensor_key: ${sensor_key}`);
                 }
             });
         });
     }
+    processCategorizedSensors(categorizedData) {
+        // Loop through each sensor category (grouped by sensor_key)
+        Object.keys(categorizedData).forEach(category => {
+            const sensors = categorizedData[category];
+            
+            // Loop through each sensor data point within the category
+            sensors.forEach(sensor => {
+                const { dashboard_sensor_id, sensor_id, device_id, sensor_key, value } = sensor;
+    
+                if (!dashboard_sensor_id) {
+                    console.warn(`Missing dashboard_sensor_id for sensor_id: ${sensor_id} in category: ${category}`);
+                    return; // Skip this sensor if it doesn't have a dashboard_sensor_id
+                }
+    
+                // Find the configuration for the sensor (if available)
+                const config = this.configManager.getSensorConfig(sensor_key);
+    
+                if (config) {
+                    // Ensure device_id and sensor_id are strings for consistency
+                    const deviceIdStr = String(device_id);
+                    const sensorIdStr = String(sensor_id);
+    
+                    // Create or update the tile for this sensor
+                    const tile = this.tileRenderer.createSingleTile(sensor_key, deviceIdStr, sensorIdStr, dashboard_sensor_id);
+                    
+                    // Store the dashboard sensor id in the tile for future reference
+                    const tileKey = `${deviceIdStr}_${sensorIdStr}_${sensor_key}Tile`;
+                    if (tile) {
+                        tile.dataset.dashboardSensorId = dashboard_sensor_id; // Store the dashboard_sensor_id
+                    }
+    
+                    // Update the display with the latest sensor value
+                    this.tileRenderer.updateSensorDisplay(sensor_key, value, config, deviceIdStr, sensorIdStr);
+                } else {
+                    console.warn(`No configuration found for sensor_key: ${sensor_key}`);
+                }
+            });
+        });
+    }
+        
 
     async handleRelayControl(event) {
         const { sensorType, deviceId, sensorId, state } = event.detail;

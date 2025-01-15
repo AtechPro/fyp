@@ -74,6 +74,18 @@ class Sensor(db.Model):
     automation_rules = db.relationship('AutomationRule', backref=db.backref('sensor', lazy=True), cascade='all, delete-orphan')
     def __repr__(self):
         return f"<Sensor {self.sensor_key} of Device {self.device_id}>"
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "device_id": self.device_id,
+            "sensor_key": self.sensor_key,
+            "sensor_type_id": self.sensor_type_id,
+            "value": self.value,
+            "status": self.status,
+            "last_seen": self.last_seen.strftime('%Y-%m-%d %H:%M:%S') if self.last_seen else None,
+            "userid": self.userid
+        }
 
 
 # Device Model
@@ -146,17 +158,6 @@ class ZoneSensor(db.Model):
         return f"<ZoneSensor {self.id}>"
 
 
-class DashboardTile(db.Model):
-    __tablename__ = 'dashboard_tiles'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    userid = db.Column(db.Integer, db.ForeignKey('users.userid', ondelete='CASCADE'), nullable=False)
-    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id', ondelete='CASCADE'), nullable=False)
-
-    # Relationships
-    user = db.relationship('User', backref=db.backref('dashboard_tiles', cascade='all, delete-orphan', lazy=True))
-    sensor = db.relationship('Sensor', backref=db.backref('dashboard_tiles', cascade='all, delete-orphan', lazy=True))
-
-
 class AutomationRule(db.Model):
     __tablename__ = 'automation_rules'
 
@@ -221,3 +222,22 @@ class TimerScheduler(db.Model):
             'relay_device_id': self.relay_device_id
         }
 
+class DashboardSensor(db.Model):
+    __tablename__ = 'dashboard_sensors'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id', ondelete='CASCADE'), nullable=False, unique=True)
+    added_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    # Relationship with Sensor model
+    sensor = db.relationship('Sensor', backref=db.backref('dashboard_entry', uselist=False))
+    
+    def __repr__(self):
+        return f'<DashboardSensor sensor_id:{self.sensor_id}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'sensor_id': self.sensor_id,
+            'added_at': self.added_at.strftime('%Y-%m-%d %H:%M:%S')
+        }

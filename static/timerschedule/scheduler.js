@@ -133,3 +133,87 @@ function validateFormData(formData) {
     // All checks passed
     return true;
 }
+
+function fetchTimerList() {
+    fetch('/timer/trigger_relay')
+        .then(response => response.json())
+        .then(data => {
+            const timerListDiv = document.getElementById("timerList");
+            timerListDiv.innerHTML = ''; // Clear the existing list
+            data.triggered_timers.forEach(timer => {
+                const timerElement = document.createElement('div');
+                timerElement.classList.add('timer-item', 'timer-tile'); // Add 'timer-tile' class
+
+                timerElement.innerHTML = `
+                    <div class="timer-content">
+                        <h3>${timer.timer.title || `Timer for Device ${timer.timer.relay_device_id}`}:</h3>
+                        <p>Status: ${timer.message}</p>
+                        <p>Trigger Time: ${timer.timer.trigger_time}</p>
+                        <p>Days: ${timer.timer.days}</p>
+                        <button class="delete-btn" onclick="deleteTimer(${timer.timer.id})">Delete</button>
+                        <button class="edit-btn" onclick="showEditForm(${timer.timer.id})">Edit</button>
+                        <div class="edit-form" id="edit-form-${timer.timer.id}" style="display: none;">
+                            <label>Title: <input type="text" id="edit-title-${timer.timer.id}" value="${timer.timer.title || ''}"></label>
+                            <label>Trigger Time: <input type="time" id="edit-trigger-time-${timer.timer.id}" value="${timer.timer.trigger_time}"></label>
+                            <label>Days: <input type="text" id="edit-days-${timer.timer.id}" value="${timer.timer.days}"></label>
+                            <label>Action: 
+                                <select id="edit-action-${timer.timer.id}">
+                                    <option value="ON" ${timer.timer.action === 'ON' ? 'selected' : ''}>ON</option>
+                                    <option value="OFF" ${timer.timer.action === 'OFF' ? 'selected' : ''}>OFF</option>
+                                </select>
+                            </label>
+                            <label>Relay Device ID: <input type="text" id="edit-relay-device-id-${timer.timer.id}" value="${timer.timer.relay_device_id}"></label>
+                            <button class="save-btn" onclick="editTimer(${timer.timer.id})">Save</button>
+                            <button class="cancel-btn" onclick="hideEditForm(${timer.timer.id})">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                timerListDiv.appendChild(timerElement);
+            });
+        })
+        .catch(error => console.error('Error fetching timer list:', error));
+}
+
+function showEditForm(timerId) {
+    document.getElementById(`edit-form-${timerId}`).style.display = 'block';
+}
+
+function hideEditForm(timerId) {
+    document.getElementById(`edit-form-${timerId}`).style.display = 'none';
+}
+
+function editTimer(timerId) {
+    const title = document.getElementById(`edit-title-${timerId}`).value;
+    const triggerTime = document.getElementById(`edit-trigger-time-${timerId}`).value;
+    const days = document.getElementById(`edit-days-${timerId}`).value.split(',');
+    const action = document.getElementById(`edit-action-${timerId}`).value;
+    const relayDeviceId = document.getElementById(`edit-relay-device-id-${timerId}`).value;
+
+    fetch(`/timer/scheduler/${timerId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            trigger_time: triggerTime,
+            days: days,
+            action: action,
+            relay_device_id: relayDeviceId
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert("Timer updated successfully");
+            fetchTimerList(); // Refresh the list after editing
+        } else {
+            alert("Failed to update the timer");
+        }
+    })
+    .catch(error => console.error('Error updating timer:', error));
+}
+
+// Initial fetch and interval to update the list
+setInterval(fetchTimerList, 60000); // Update every 60 seconds
+fetchTimerList();

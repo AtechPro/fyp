@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 import paho.mqtt.client as mqtt
 import json
 import time
-from database.database import db, User, Sensor, SensorType, DashboardTile
+from database.database import db, User, Sensor, SensorType, DashboardSensor
 
 
 
@@ -84,6 +84,8 @@ def dashboard():
     user = User.query.filter_by(userid=current_user.userid).first()
     return render_template('dashboard/dashboard.html', messages=messages, user=user)
 
+
+
 # Get Combined Sensor Data Route
 @dashboardbp.route('/dashboard/sensor/<device_id>/<sensor_key>', methods=['GET'])
 @login_required
@@ -128,68 +130,172 @@ def get_combined_sensor_data(device_id, sensor_key):
         }), 500
 
 # Get All Sensors Route
-@dashboardbp.route('/dashboard/sensors')
+
+# Example of adding a sensor to dashboard
+@dashboardbp.route('/dashboard/add_sensor/<int:sensor_id>', methods=['POST'])
 @login_required
-def get_sensors():
+def add_to_dashboard(sensor_id):
     try:
-        # Collect real-time data from MQTT
-        sensor_list = []
-        current_time = time.time()
-        for device_id, details in last_known_state.items():
-            if current_time - details.get("timestamp", 0) <= MAX_MESSAGE_AGE:
-                for key, value in details["data"].items():
-                    sensor_list.append({
-                        "device_id": device_id,
-                        "sensor_key": key,
-                        "value": value,
-                        "last_seen": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(details["timestamp"]))
-                    })
-        return jsonify(sensor_list)
-    except Exception as e:
-        logger.error(f"Error in get_sensors: {str(e)}")
+        # Check if sensor exists
+        sensor = Sensor.query.get(sensor_id)
+        if not sensor:
+            return jsonify({"message": "Sensor not found"}), 404
+            
+        # Check if already on dashboard
+        existing = DashboardSensor.query.filter_by(sensor_id=sensor_id).first()
+        if existing:
+            return jsonify({"message": "Sensor already on dashboard"}), 400
+            
+        # Add to dashboard
+        dashboard_sensor = DashboardSensor(sensor_id=sensor_id)
+        db.session.add(dashboard_sensor)
+        db.session.commit()
+        
         return jsonify({
-            "error": "Failed to retrieve sensor list",
+            "message": "Sensor added to dashboard",
+            "dashboard_sensor": dashboard_sensor.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "error": "Failed to add sensor to dashboard",
+            "message": str(e)
+        }), 500
+    
+@dashboardbp.route('/dashboard/remove_sensor/<int:dashboard_sensor_id>', methods=['DELETE'])
+@login_required
+def remove_from_dashboard(dashboard_sensor_id):
+    try:
+        # Check if dashboard sensor exists
+        dashboard_sensor = DashboardSensor.query.get(dashboard_sensor_id)
+        if not dashboard_sensor:
+            return jsonify({"message": "Dashboard sensor not found"}), 404
+            
+        # Remove from dashboard
+        db.session.delete(dashboard_sensor)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Sensor removed from dashboard",
+            "dashboard_sensor_id": dashboard_sensor_id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "error": "Failed to remove sensor from dashboard",
+            "message": str(e)
+        }), 500
+
+#debugging
+@dashboardbp.route('/dashboard/unregistered_dashboard_sensors', methods=['GET'])
+@login_required
+def get_unregistered_dashboard_sensors():
+    try:
+        # Fetch all records from the Sensor table
+        sensors = Sensor.query.all()
+
+        # Fetch all registered sensors from the DashboardSensor table
+        registered_sensor_ids = {sensor.sensor_id for sensor in DashboardSensor.query.all()}
+
+        # Filter out registered sensors, only include unregistered sensors
+        unregistered_sensors = [
+            sensor.to_dict() for sensor in sensors
+            if sensor.id not in registered_sensor_ids
+        ]
+
+        # Return the list of unregistered sensors as JSON
+        return jsonify(unregistered_sensors)
+
+    except Exception as e:
+        logger.error(f"Error fetching dashboard sensors: {str(e)}")
+        return jsonify({
+            "error": "Failed to fetch dashboard sensors",
             "message": f"An unexpected error occurred: {str(e)}"
         }), 500
 
 
-@dashboardbp.route('/dashboard/categorize_sensors', methods=['GET'])
+@dashboardbp.route('/dashboard/dashboard_sensors', methods=['GET'])
 @login_required
-def categorize_sensors():
+def get_registered_dashboard_sensors():
     try:
-        # Step 1: Check the database for paired sensors
-        paired_sensors = Sensor.query.all()
-        paired_sensor_ids = {sensor.device_id for sensor in paired_sensors}
+        # Fetch all records from the Sensor table
+        sensors = Sensor.query.all()
+
+        # Fetch all registered sensors from the DashboardSensor table
+        registered_sensor_ids = {sensor.sensor_id for sensor in DashboardSensor.query.all()}
+
+        # Filter out unregistered sensors, only include registered sensors
+        registered_sensors = [
+            sensor.to_dict() for sensor in sensors
+            if sensor.id in registered_sensor_ids
+        ]
+
+        # Return the list of registered sensors as JSON
+        return jsonify(registered_sensors)
+
+    except Exception as e:
+        logger.error(f"Error fetching dashboard sensors: {str(e)}")
+        return jsonify({
+            "error": "Failed to fetch dashboard sensors",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }), 500
+
+
+@dashboardbp.route('/dashboard/dashboardsensor', methods=['GET'])
+@login_required
+def dashboardsensor():
+    try:
+        # Step 1: Get all dashboard sensors with their related sensor data
+        dashboard_entries = DashboardSensor.query.join(Sensor).all()
+
+        if not dashboard_entries:
+            return jsonify({
+                "message": "No sensors added to dashboard"
+            }), 404
+
+        # Create a set of (device_id, sensor_key) pairs for sensors on the dashboard
+        dashboard_sensors = {(entry.sensor.device_id, entry.sensor.sensor_key): entry for entry in dashboard_entries}
 
         # Step 2: Collect real-time data from MQTT
         current_time = time.time()
         categorized_data = {}
 
         for device_id, details in last_known_state.items():
-            # Only process data from paired sensors
-            if device_id in paired_sensor_ids:
-                if current_time - details.get("timestamp", 0) <= MAX_MESSAGE_AGE:
-                    for key, value in details["data"].items():
-                        sensor_type = key  # Assuming sensor_key is the sensor type
-                        if sensor_type not in categorized_data:
-                            categorized_data[sensor_type] = []
-                        categorized_data[sensor_type].append({
+            # Only process if this device has sensors on the dashboard
+            for sensor_key, value in details["data"].items():
+                # Check if this (device_id, sensor_key) pair is on the dashboard
+                dashboard_sensor = dashboard_sensors.get((device_id, sensor_key))
+                if dashboard_sensor:
+                    if current_time - details.get("timestamp", 0) <= MAX_MESSAGE_AGE:
+                        if sensor_key not in categorized_data:
+                            categorized_data[sensor_key] = []
+                        categorized_data[sensor_key].append({
+                            "sensor_id": dashboard_sensor.sensor_id,  # Add sensor_id
+                            "dashboard_sensor_id": dashboard_sensor.id,  # Add the dashboard sensor id
                             "device_id": device_id,
-                            "sensor_key": key,
+                            "sensor_key": sensor_key,
                             "value": value,
                             "last_seen": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(details["timestamp"]))
                         })
+
+        if not categorized_data:
+            return jsonify({
+                "message": "No recent data found for the sensors on the dashboard"
+            }), 404
 
         # Step 3: Return the categorized data
         return jsonify(categorized_data)
 
     except Exception as e:
-        logger.error(f"Error categorizing sensors: {str(e)}")
+        logger.error(f"Error fetching dashboard sensors: {str(e)}")
         return jsonify({
-            "error": "Failed to categorize sensors",
+            "error": "Failed to fetch dashboard sensors",
             "message": f"An unexpected error occurred: {str(e)}"
         }), 500
-    
+
+
 
 @dashboardbp.route('/dashboard/<device_id>/relay/command', methods=['GET', 'POST'])
 @login_required
@@ -251,4 +357,3 @@ def get_sensor_types():
     except Exception as e:
         logger.error(f"Error fetching sensor types: {str(e)}")
         return jsonify({"error": "Failed to fetch sensor types"}), 500
-

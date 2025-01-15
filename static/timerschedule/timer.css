@@ -103,3 +103,13 @@ h1 {
         margin-bottom: 10px; /* Add spacing between stacked buttons */
     }
 }
+
+.timerDisplay{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+}

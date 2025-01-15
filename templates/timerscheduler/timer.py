@@ -201,7 +201,62 @@ def create_timer():
     # Return success
     return jsonify({"message": "Timer created successfully", "timer": new_timer.to_dict()}), 201
 
+@timerbp.route('/timer/scheduler/<int:timer_id>', methods=['PUT'])
+def edit_timer(timer_id):
+    # Get the data from the request JSON
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON data"}), 400
 
+    # Check if the timer exists
+    timer = TimerScheduler.query.filter_by(id=timer_id, user_id=current_user.userid).first()
+    if not timer:
+        return jsonify({"error": "Timer not found"}), 404
+
+    # Update the fields as necessary
+    if "trigger_time" in data:
+        timer.trigger_time = data['trigger_time']
+    if "days" in data:
+        timer.days = ",".join(data['days'])
+    if "action" in data:
+        timer.action = data['action']
+    if "relay_device_id" in data:
+        timer.relay_device_id = data['relay_device_id']
+    if "enabled" in data:
+        timer.enabled = data['enabled']
+    if "description" in data:
+        timer.description = data['description']
+    if "title" in data:
+        timer.title = data['title']
+
+    # Commit changes to the database
+    db.session.commit()
+
+    # Return success with the updated timer as JSON
+    return jsonify({"message": "Timer updated successfully", "timer": timer.to_dict()}), 200
+
+
+# Delete Timer
+@timerbp.route('/timer/scheduler', methods=['DELETE'])
+def delete_timer():
+    # Get the JSON data containing the timer_id to delete
+    data = request.get_json()
+    if not data or "timer_id" not in data:
+        return jsonify({"error": "Invalid JSON data, 'timer_id' is required"}), 400
+
+    timer_id = data['timer_id']
+
+    # Find the timer by ID and user_id
+    timer = TimerScheduler.query.filter_by(id=timer_id, user_id=current_user.userid).first()
+    if not timer:
+        return jsonify({"error": "Timer not found"}), 404
+
+    # Delete the timer
+    db.session.delete(timer)
+    db.session.commit()
+
+    # Return success message
+    return jsonify({"message": "Timer deleted successfully"}), 200
 
 
 @timerbp.route('/timer/scheduler', methods=['GET'])
@@ -228,11 +283,7 @@ def get_current_time():
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
     
-
-
-from datetime import datetime
-from flask import jsonify
-
+    
 @timerbp.route('/timer/trigger_relay', methods=['GET'])
 def trigger_relay():
     try:
@@ -260,6 +311,7 @@ def trigger_relay():
                 device = Sensor.query.filter_by(device_id=timer.relay_device_id).first()
                 if not device:
                     triggered_timers.append({
+                        "timer_id": timer.id,
                         "timer": timer.to_dict(),
                         "message": f"Device {timer.relay_device_id} is not registered.",
                         "reacted": False
