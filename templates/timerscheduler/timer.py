@@ -300,32 +300,30 @@ def trigger_relay():
         triggered_timers = []
 
         for timer in timers:
-            # Compare the current day with the days scheduled in the timer
+            # Initialize a default message and status
+            status = {"timer": timer.to_dict(), "reacted": False}
+
+            # Check if the current day matches the timer days
             days_map = timer.days.split(",")  # Multiple days support
             if current_day not in days_map:
-                continue  # Skip if the current day isn't in the scheduled days
+                status["message"] = f"Timer not scheduled for today ({current_day})."
+                triggered_timers.append(status)
+                continue  # Skip to the next timer
             
-            # Compare the current time with the scheduled trigger time
+            # Check if the current time matches the trigger time
             if current_time == timer.trigger_time:
-                # Trigger the relay action (ON or OFF) based on the timer action
+                # Trigger the relay action (ON or OFF)
                 device = Sensor.query.filter_by(device_id=timer.relay_device_id).first()
                 if not device:
-                    triggered_timers.append({
-                        "timer_id": timer.id,
-                        "timer": timer.to_dict(),
-                        "message": f"Device {timer.relay_device_id} is not registered.",
-                        "reacted": False
-                    })
+                    status["message"] = f"Device {timer.relay_device_id} is not registered."
+                    triggered_timers.append(status)
                     continue  # Skip if device is not found
 
                 # Validate the action (ON/OFF)
                 command = timer.action.upper()
                 if command not in ['ON', 'OFF']:
-                    triggered_timers.append({
-                        "timer": timer.to_dict(),
-                        "message": "Invalid command. Use 'ON' or 'OFF'.",
-                        "reacted": False
-                    })
+                    status["message"] = "Invalid command. Use 'ON' or 'OFF'."
+                    triggered_timers.append(status)
                     continue  # Skip if the command is invalid
 
                 # Publish command to MQTT topic
@@ -335,19 +333,17 @@ def trigger_relay():
                 # Log the action
                 logger.info(f"Relay {timer.relay_device_id} set to {command}")
 
-                # Add the timer info with success message
-                triggered_timers.append({
-                    "timer": timer.to_dict(),
+                # Update the status for successful execution
+                status.update({
                     "message": f"Relay {timer.relay_device_id} set to {command}",
                     "reacted": True
                 })
             else:
-                # If timer doesn't match current time, no action taken
-                triggered_timers.append({
-                    "timer": timer.to_dict(),
-                    "message": "Timer not triggered at this time.",
-                    "reacted": False
-                })
+                # Timer not triggered due to time mismatch
+                status["message"] = f"Timer not triggered; current time ({current_time}) does not match {timer.trigger_time}."
+            
+            # Add status to the response
+            triggered_timers.append(status)
         
         # Return all timer reactions and statuses
         return jsonify({
@@ -360,6 +356,7 @@ def trigger_relay():
             "error": "Failed to check timers",
             "message": str(e)
         }), 500
+
 
 
 # Debugging purpose
