@@ -92,3 +92,15 @@ form button {
 form button:hover {
     background-color: #218838;
 }
+
+.header {
+    display: flex;
+    justify-content: center; /* Horizontally center the content */
+    align-items: center; /* Vertically center the content */
+    height: 100px; /* Adjust the height as needed */
+}
+
+.header h1 {
+    color: rgb(0, 0, 0); /* Optional: for text color */
+    font-size: 36px; /* Adjust font size as needed */
+}

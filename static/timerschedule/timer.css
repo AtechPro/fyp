@@ -1,115 +1,112 @@
-/* General Styles */
+/* Base Styles */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 20px;
-    background-color: #f4f4f4;
-    display: flex;
-    flex-direction: column; /* Stack elements vertically */
-    align-items: center; /* Center elements horizontally */
-}
-
-/* Sidebar Styles */
-.sidebar {
-    width: 100%;
-    background-color: #007bff; /* Example color for sidebar */
-    color: white;
-    padding: 15px;
-    margin-bottom: 20px; /* Space between sidebar and main content */
-}
-
-/* Container Styles */
-.container, .Scheduler {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    width: 100%;
-    max-width: 600px; /* Limit width for better readability */
-    margin-bottom: 20px; /* Space between containers */
-}
-
-/* Heading Styles */
-h1 {
-    margin-bottom: 20px;
-    font-size: 24px;
+    padding: 0;
+    background-color: #f4f4f9;
     color: #333;
-    text-align: center; /* Center the heading */
 }
 
-/* Form Group Styles */
+h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #444;
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100%;
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Container */
+.container {
+    margin-left: 250px; /* Reserved space for the sidebar */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Timer Display */
+#timerDisplay {
+    font-size: 48px;
+    font-weight: bold;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Form Styles */
+form {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
 .form-group {
     margin-bottom: 15px;
 }
 
-.form-group label {
+label {
     display: block;
-    margin-bottom: 5px;
     font-weight: bold;
-    color: #555;
+    margin-bottom: 5px;
 }
 
-.form-group input,
-.form-group select {
+select,
+input {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
+    font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
-    color: #333;
+    box-sizing: border-box;
 }
 
-/* Checkbox Group Styles */
-.form-group .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.form-group .checkbox-group div {
-    display: flex;
-    align-items: center;
-}
-
-/* Button Styles */
-.btn {
-    display: inline-block;
-    padding: 10px 15px;
-    background-color: #007bff;
+button.btn {
+    background-color: #3498db;
     color: white;
     border: none;
-    border-radius: 4px;
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 5px;
     cursor: pointer;
-    width: 100%; /* Make button full width */
-    text-align: center; /* Center button text */
+    display: block;
+    width: 100%;
+}
+
+button.btn:hover {
+    background-color: #2980b9;
+}
+
+
+/* Scheduler Button Container */
+.scheduler-button-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Scheduler Button */
+.btn-scheduler {
+    display: inline-block;
+    background-color: #27ae60;
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
     transition: background-color 0.3s ease;
 }
 
-.btn:hover {
-    background-color: #0056b3;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-
-    h1 {
-        font-size: 20px; /* Smaller heading for mobile */
-    }
-
-    .btn {
-        margin-bottom: 10px; /* Add spacing between stacked buttons */
-    }
-}
-
-.timerDisplay{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 20px;
+.btn-scheduler:hover {
+    background-color: #219150;
 }

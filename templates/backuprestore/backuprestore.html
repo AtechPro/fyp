@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup and Restore</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .form-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .form-container input, .form-container button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .form-container button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .form-container button:hover {
+            background-color: #45a049;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        {% include 'navigation/nav.html' %}
+    </nav>
+
+    <h1>Backup and Restore Database</h1>
+
+    <!-- Backup Form -->
+    <div class="form-container">
+        <h3>Create a Backup</h3>
+        <button id="backupButton">Create Backup</button>
+    </div>
+
+    <!-- Restore Form -->
+    <div class="form-container">
+        <h3>Restore from Backup</h3>
+        <input type="text" id="restoreFileName" placeholder="Enter backup filename" />
+        <button id="restoreButton">Restore Database</button>
+    </div>
+
+    <!-- Download Backup Form -->
+    <div class="form-container">
+        <h3>Download a Backup</h3>
+        <input type="text" id="downloadFileName" placeholder="Enter filename to download" />
+        <button id="downloadButton">Download Backup</button>
+    </div>
+
+    <!-- Result Display -->
+    <div id="result" class="result"></div>
+
+    <script>
+        // Handle backup request
+        document.getElementById('backupButton').addEventListener('click', function() {
+            fetch('/backup_restore/backup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('result').innerHTML = `
+                        <div class="success">Backup created successfully! Filename: ${data.filename}</div>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <div class="error">Error: ${data.message}</div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                `;
+            });
+        });
+
+        // Handle restore request
+        document.getElementById('restoreButton').addEventListener('click', function() {
+            const filename = document.getElementById('restoreFileName').value.trim();
+
+            if (!filename) {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">Please provide a filename to restore.</div>
+                `;
+                return;
+            }
+
+            fetch('/backup_restore/restore', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filename: filename }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('result').innerHTML = `
+                        <div class="success">${data.message}</div>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <div class="error">${data.message}</div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                `;
+            });
+        });
+
+        // Handle download request
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            const filename = document.getElementById('downloadFileName').value.trim();
+
+            if (!filename) {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">Please provide a filename to download.</div>
+                `;
+                return;
+            }
+
+            const url = `/backup_restore/download/${filename}`;
+
+            fetch(url)
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = url; // Trigger the file download
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <div class="error">Error: File not found.</div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                `;
+            });
+        });
+    </script>
+
+</body>
+</html>

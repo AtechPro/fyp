@@ -124,6 +124,15 @@ textarea:focus {
     color: #555;
 }
 
+
+.main-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    text-align: center; /* Center the title */
+    width: 100%; /* Ensure it spans the full width of its container */
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .content-container {

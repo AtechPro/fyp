@@ -8,6 +8,9 @@ from templates.devicemanage.devicemanage import devicemanage_bp
 from templates.automationrule.automation import autobp
 from templates.zone.zone import zone_bp
 from templates.timerscheduler.timer import timerbp
+from templates.backuprestore.backuprestore import backup_restore_bp
+
+
 from flask_login import LoginManager, login_user, logout_user, current_user
 from datetime import timedelta
 from flask.sessions import SecureCookieSessionInterface
@@ -37,6 +40,7 @@ app.register_blueprint(dashboardbp)
 app.register_blueprint(zone_bp)
 app.register_blueprint(autobp)
 app.register_blueprint(timerbp)
+app.register_blueprint(backup_restore_bp)
 # Initialize the database
 db.init_app(app)
 

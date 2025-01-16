@@ -1,106 +1,130 @@
-/* styles.css */
+/* feedback.css */
+
+/* Reset and base styles */
 body {
-    font-family: Arial, sans-serif;
     margin: 0;
-    padding: 20px;
-    background-color: #f4f4f4;
-    display: flex;
-    flex-direction: column; /* Stack elements vertically */
-    align-items: center; /* Center elements horizontally */
+    font-family: Arial, sans-serif;
+    color: #333;
+    background-color: #f9f9f9;
 }
 
+/* Sidebar styles */
 .sidebar {
-    position: fixed; /* Fix the sidebar in place */
-    left: 0;
+    position: fixed;
     top: 0;
-    width: 250px; /* Set the width of the sidebar */
-    height: 100%; /* Make the sidebar span the full height of the viewport */
-    background-color: #f4f4f4; /* Optional: Add a background color to the sidebar */
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-    padding: 20px; /* Optional: Add padding inside the sidebar */
-    box-sizing: border-box; /* Ensure padding doesn't affect the width */
-}
-
-h1, h2 {
-    margin: 20px 0; /* Add margin to headings */
-}
-
-form {
-    margin-bottom: 20px; /* Add some margin below the form */
-}
-
-label {
-    display: block; /* Make labels block elements for better spacing */
-    margin: 10px 0 5px; /* Add margin for labels */
-}
-
-input[type="text"],
-input[type="time"],
-textarea,
-select {
-    width: 100%; /* Make inputs and textarea full width */
-    padding: 8px; /* Add padding for better appearance */
-    margin-bottom: 10px; /* Add margin below inputs */
-    box-sizing: border-box; /* Ensure padding doesn't affect width */
-}
-
-button {
-    padding: 10px 15px; /* Add padding to the button */
-    cursor: pointer; /* Change cursor to pointer on hover */
-    background-color: #007BFF; /* Optional: Add a background color */
-    color: #fff; /* Optional: Add a text color */
-    border: none; /* Remove border */
-    border-radius: 4px; /* Optional: Add rounded corners */
-}
-
-button:hover {
-    background-color: #0056b3; /* Optional: Darken button on hover */
-}
-
-
-#timerList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.timer-tile {
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    left: 0;
+    width: 250px; /* Matches the requested margin-left */
+    height: 100%;
+    background-color: #2c3e50;
+    color: #ecf0f1;
     padding: 15px;
-    width: 200px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
 }
 
-.timer-tile:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+/* Main content container */
+.content-container {
+    margin-left: 250px; /* Adjusted for the sidebar width */
+    padding: 20px;
+    transition: margin-left 0.3s ease;
 }
 
-.timer-content h3 {
-    margin: 0 0 10px;
+/* Feedback form styles */
+.feedback-form-container {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.feedback-form-container h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
     font-size: 16px;
     font-weight: bold;
+    margin-bottom: 5px;
 }
 
-.timer-content p {
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
     font-size: 14px;
-    color: #555;
-}
-
-.delete-btn {
-    background-color: #f44336; /* Red background */
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    cursor: pointer;
+    border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 14px;
-    transition: background-color 0.3s;
+    resize: none;
+    box-sizing: border-box;
 }
 
-.delete-btn:hover {
-    background-color: #d32f2f; /* Darker red on hover */
+.form-group textarea:focus {
+    border-color: #2980b9;
+    outline: none;
+    box-shadow: 0 0 4px rgba(41, 128, 185, 0.4);
+}
+
+.btn-primary {
+    background-color: #2980b9;
+    color: #ffffff;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #3498db;
+}
+
+/* Feedback list styles */
+#feedback-list {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#feedback-list h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+
+    .content-container {
+        margin-left: 200px;
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        box-shadow: none;
+    }
+
+    .content-container {
+        margin-left: 0;
+        padding: 10px;
+    }
+
+    .feedback-form-container,
+    #feedback-list {
+        padding: 15px;
+    }
 }

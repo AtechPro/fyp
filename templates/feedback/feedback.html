@@ -11,6 +11,11 @@
         {% include 'navigation/nav.html' %}
     </nav>
 
+    <header class="main-title">
+        <h1>Feedback Management</h1>
+    </header>
+
+
     <main class="content-container">
         <section class="feedback-form-container">
             <h1>Submit Your Feedback</h1>
@@ -28,8 +33,11 @@
         </section>
 
         <section id="feedback-list">
-            <h1>Feedback List</h1>
-            <!-- Feedback items will be dynamically populated -->
+            <h2>Feedback List</h2>
+            <ul id="feedback-items">
+                <!-- Placeholder when no feedback exists -->
+                <li id="no-feedback">No feedback available yet. Submit the first one!</li>
+            </ul>
         </section>
     </main>
 
