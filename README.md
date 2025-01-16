@@ -13,25 +13,16 @@ keyword
 - Automation
 - Remote functions
 
-ps : idk what i wrote but that the introduction
 
 ## Usage
 
-Local usage, local network, closed network = more secure right (can't avoid tailgating tbh), the main of this project is to fulfill the final year project. security is not my first initilization because of hard to implement or encrypt the data transfer
 
 ## system requirements
-- 32 bit linux (any linux should be able to run), make sure the usb wifi is support with the linux version 
+- 32 bit linux (any linux should be able to run), make sure the usb wifi is support with the linux version, recommended 64 Bit
 - raspberry pi 3 or 4 (any raspberry pi should be able to run)
 - you can consider your old laptop, celeron should be able to run. pull out your old thinkpad, or 2007 ish laptop, i can't gurenteed the power consumptions. i suggest the laptop uses low then 45w. 
 - ESP32 or ESP8266 (any ESP should be able to run)
 - need more that 2 interface, such as wifi, ethernet (Recommended using the Ethernet)
 
-
-
-
-## additional note
-
-- Why I'm still here? just to suffer? 
-- You are totally cooked when you are ran out of your time and not doing thing that productive
 
 
