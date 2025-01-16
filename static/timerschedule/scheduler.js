@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', function () {
             // Log the server response
             console.log('Server Response:', data);
 
+            if (data.message) {
+                alert('Schedule added successfully!');
+            } else {
+                alert('Failed to add the schedule. Please try again.');
+            }
             // Optionally, reset the form after successful submission
             document.getElementById('timerForm').reset();
         })
@@ -214,6 +219,34 @@ function editTimer(timerId) {
     .catch(error => console.error('Error updating timer:', error));
 }
 
+
+function deleteTimer(timerId) {
+    if (!confirm("Are you sure you want to delete this timer?")) {
+        return; // Exit if the user cancels the confirmation
+    }
+
+    fetch(`/timer/scheduler`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ timer_id: timerId }), // Send the timer_id in the request body
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert("Timer deleted successfully");
+            fetchTimerList(); // Refresh the list after deleting
+        } else {
+            alert("Failed to delete the timer");
+        }
+    })
+    .catch(error => console.error('Error deleting timer:', error));
+}
+
+
+
+
 // Initial fetch and interval to update the list
-setInterval(fetchTimerList, 60000); // Update every 60 seconds
+setInterval(fetchTimerList, 5000); // Update every 60 seconds
 fetchTimerList();

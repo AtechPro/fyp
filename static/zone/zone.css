@@ -29,9 +29,11 @@ body {
 }
 
 .sensor {
-    border: 1px solid #ccc;
     padding: 10px;
     margin-bottom: 10px;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
@@ -95,4 +97,78 @@ button:hover {
 
 #close-edit-popup:hover {
     color: #ff0000; /* Change color on hover */
+}
+
+/* Update sensor styling to work with checkboxes */
+.sensor {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.sensor label {
+    margin-left: 10px;
+}
+
+.sensor input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* Additional styling for form elements */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: bold;
+    display: block;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Styling for the sensor checkboxes */
+#sensor-checkbox-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.sensor-checkbox {
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+}
+
+.sensor-checkbox label {
+    margin-left: 5px;
+    font-size: 14px;
+}
+
+.sensor-checkbox input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #2980b9;
 }

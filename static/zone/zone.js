@@ -110,30 +110,31 @@ async function fetchUnassignedSensors() {
         const response = await fetch(`${apiBaseUrl}/unassigned-sensors`);
         const sensors = await response.json();
 
-        const container = document.getElementById('sensor-tiles-container');
-        container.innerHTML = ''; // Clear existing tiles
+        const container = document.getElementById('sensor-checkbox-container');
+        container.innerHTML = ''; // Clear existing checkboxes
 
         sensors.forEach(sensor => {
             const sensorDiv = document.createElement('div');
-            sensorDiv.classList.add('sensor');
-            sensorDiv.dataset.sensorId = sensor.sensor_id;
+            sensorDiv.classList.add('sensor-checkbox');
 
-            sensorDiv.innerHTML = `
-                <h3>${sensor.name}</h3>
-                <p>Type: ${sensor.type}</p>
-            `;
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `sensor-${sensor.sensor_id}`;
+            checkbox.value = sensor.sensor_id;
+            checkbox.name = 'sensor'; // Allows multiple selections
 
-            sensorDiv.addEventListener('click', () => toggleSensorSelection(sensorDiv));
+            const label = document.createElement('label');
+            label.setAttribute('for', checkbox.id);
+            label.innerText = `${sensor.name} (${sensor.type})`;
+
+            sensorDiv.appendChild(checkbox);
+            sensorDiv.appendChild(label);
+
             container.appendChild(sensorDiv);
         });
     } catch (error) {
         console.error('Error fetching unassigned sensors:', error);
     }
-}
-
-// Toggle sensor selection
-function toggleSensorSelection(sensorDiv) {
-    sensorDiv.classList.toggle('selected');
 }
 
 // Create a new zone
@@ -143,9 +144,9 @@ async function createZone(event) {
     const name = document.getElementById('zone-name').value;
     const description = document.getElementById('zone-description').value;
 
-    // Collect IDs of selected sensors
-    const selectedSensors = Array.from(document.querySelectorAll('.sensor.selected'))
-        .map(sensorDiv => sensorDiv.dataset.sensorId);
+    // Collect IDs of selected sensors from checkboxes
+    const selectedSensors = Array.from(document.querySelectorAll('#sensor-checkbox-container input[type="checkbox"]:checked'))
+        .map(checkbox => checkbox.value);
 
     try {
         const response = await fetch(`${apiBaseUrl}/zone`, {

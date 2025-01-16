@@ -85,50 +85,6 @@ def dashboard():
     return render_template('dashboard/dashboard.html', messages=messages, user=user)
 
 
-
-# Get Combined Sensor Data Route
-@dashboardbp.route('/dashboard/sensor/<device_id>/<sensor_key>', methods=['GET'])
-@login_required
-def get_combined_sensor_data(device_id, sensor_key):
-    try:
-        if not device_id.startswith("Device"):
-            device_id = f"Device{device_id.zfill(2)}"
-
-        # Check if the sensor exists in the database
-        sensor = Sensor.query.filter_by(device_id=device_id, sensor_key=sensor_key).first()
-        if not sensor:
-            return jsonify({
-                "error": f"Sensor {sensor_key} not found for device {device_id}",
-                "message": "Sensor not found in the database"
-            }), 404
-
-        # Check for real-time data from MQTT
-        device_data = last_known_state.get(device_id, {}).get("data", {})
-        response_data = {}
-
-        if sensor_key in device_data:
-            # Real-time data is available
-            value = device_data[sensor_key]
-            response_data = {
-                "sensor_key": sensor_key,
-                "value": value,
-                "source": "mqtt",
-                "last_seen": "real-time"
-            }
-        else:
-            return jsonify({
-                "error": f"Sensor {sensor_key} not found for device {device_id}",
-                "message": "Data not available in real-time"
-            }), 404
-
-        return jsonify(response_data)
-    except Exception as e:
-        logger.error(f"Error in get_combined_sensor_data: {str(e)}")
-        return jsonify({
-            "error": "Failed to retrieve sensor data",
-            "message": f"An unexpected error occurred: {str(e)}"
-        }), 500
-
 # Get All Sensors Route
 
 # Example of adding a sensor to dashboard
@@ -136,6 +92,9 @@ def get_combined_sensor_data(device_id, sensor_key):
 @login_required
 def add_to_dashboard(sensor_id):
     try:
+
+        if current_user.role != 1:
+            return jsonify({"message": "Unauthorized access"}), 403
         # Check if sensor exists
         sensor = Sensor.query.get(sensor_id)
         if not sensor:
@@ -167,6 +126,8 @@ def add_to_dashboard(sensor_id):
 @login_required
 def remove_from_dashboard(dashboard_sensor_id):
     try:
+        if current_user.role != 1:
+            return jsonify({"message": "Unauthorized access"}), 403
         # Check if dashboard sensor exists
         dashboard_sensor = DashboardSensor.query.get(dashboard_sensor_id)
         if not dashboard_sensor:

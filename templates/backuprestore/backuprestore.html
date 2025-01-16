@@ -3,192 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backup and Restore</title>
+    <title>Backup & Restore</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 30px;
-            padding: 20px;
+            margin: 20px;
+            margin-left: 250px; /* Added margin-left for sidebar */
         }
 
         h1 {
-            text-align: center;
+            color: #333;
         }
 
-        .form-container {
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .backup-list {
             margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            width: 80%;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .form-container input, .form-container button {
+            border-collapse: collapse;
             width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
         }
 
-        .form-container button {
-            background-color: #4CAF50;
-            color: white;
+        .backup-list th, .backup-list td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .backup-list th {
+            background-color: #f4f4f4;
+        }
+
+        .buttons {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 14px;
             cursor: pointer;
+            margin-right: 10px;
         }
 
-        .form-container button:hover {
-            background-color: #45a049;
+        input[type="file"] {
+            margin: 10px 0;
         }
 
-        .result {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            text-align: center;
+        .message {
+            margin: 10px 0;
+            color: green;
         }
 
         .error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .success {
-            background-color: #d4edda;
-            color: #155724;
+            color: red;
         }
     </style>
 </head>
 <body>
-
     <nav class="sidebar">
         {% include 'navigation/nav.html' %}
     </nav>
 
-    <h1>Backup and Restore Database</h1>
+    <div class="container">
+        <h1>Backup & Restore</h1>
 
-    <!-- Backup Form -->
-    <div class="form-container">
-        <h3>Create a Backup</h3>
-        <button id="backupButton">Create Backup</button>
+        <div class="buttons">
+            <button id="backup-btn">Create Backup</button>
+        </div>
+
+        <h2>Available Backups</h2>
+        <table class="backup-list" id="backup-table">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Size (bytes)</th>
+                    <th>Created At</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="4">No backups available</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Restore Database</h2>
+        <form id="restore-form">
+            <label for="backup-file">Select a backup file:</label>
+            <input type="file" id="backup-file" name="backup_file" accept=".db" required>
+            <button type="submit">Restore</button>
+        </form>
+
+        <div class="message" id="message"></div>
     </div>
-
-    <!-- Restore Form -->
-    <div class="form-container">
-        <h3>Restore from Backup</h3>
-        <input type="text" id="restoreFileName" placeholder="Enter backup filename" />
-        <button id="restoreButton">Restore Database</button>
-    </div>
-
-    <!-- Download Backup Form -->
-    <div class="form-container">
-        <h3>Download a Backup</h3>
-        <input type="text" id="downloadFileName" placeholder="Enter filename to download" />
-        <button id="downloadButton">Download Backup</button>
-    </div>
-
-    <!-- Result Display -->
-    <div id="result" class="result"></div>
 
     <script>
-        // Handle backup request
-        document.getElementById('backupButton').addEventListener('click', function() {
-            fetch('/backup_restore/backup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    document.getElementById('result').innerHTML = `
-                        <div class="success">Backup created successfully! Filename: ${data.filename}</div>
-                    `;
-                } else {
-                    document.getElementById('result').innerHTML = `
-                        <div class="error">Error: ${data.message}</div>
-                    `;
-                }
-            })
-            .catch(error => {
-                document.getElementById('result').innerHTML = `
-                    <div class="error">Error: ${error.message}</div>
-                `;
-            });
-        });
+        document.addEventListener("DOMContentLoaded", function () {
+            const backupTable = document.getElementById("backup-table").querySelector("tbody");
+            const messageDiv = document.getElementById("message");
 
-        // Handle restore request
-        document.getElementById('restoreButton').addEventListener('click', function() {
-            const filename = document.getElementById('restoreFileName').value.trim();
+            // Fetch the list of backups
+            function fetchBackups() {
+                fetch("/backups")
+                    .then((response) => response.json())
+                    .then((data) => {
+                        backupTable.innerHTML = "";
+                        if (data.backups && data.backups.length > 0) {
+                            data.backups.forEach((backup) => {
+                                const row = document.createElement("tr");
+                                row.innerHTML = `
+                                    <td>${backup.filename}</td>
+                                    <td>${backup.size}</td>
+                                    <td>${new Date(backup.created_at).toLocaleString()}</td>
+                                    <td>
+                                        <a href="/backups/${backup.filename}" download>Download</a>
+                                        <button class="delete-btn" data-filename="${backup.filename}">Delete</button>
+                                    </td>
+                                `;
+                                backupTable.appendChild(row);
+                            });
 
-            if (!filename) {
-                document.getElementById('result').innerHTML = `
-                    <div class="error">Please provide a filename to restore.</div>
-                `;
-                return;
+                            // Add event listeners to the delete buttons
+                            document.querySelectorAll(".delete-btn").forEach((button) => {
+                                button.addEventListener("click", function () {
+                                    const filename = button.getAttribute("data-filename");
+                                    deleteBackup(filename, button);
+                                });
+                            });
+                        } else {
+                            backupTable.innerHTML = "<tr><td colspan='4'>No backups available</td></tr>";
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching backups:", error);
+                        messageDiv.textContent = "Error fetching backups.";
+                        messageDiv.className = "error";
+                    });
             }
 
-            fetch('/backup_restore/restore', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ filename: filename }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    document.getElementById('result').innerHTML = `
-                        <div class="success">${data.message}</div>
-                    `;
-                } else {
-                    document.getElementById('result').innerHTML = `
-                        <div class="error">${data.message}</div>
-                    `;
-                }
-            })
-            .catch(error => {
-                document.getElementById('result').innerHTML = `
-                    <div class="error">Error: ${error.message}</div>
-                `;
+            // Trigger backup creation
+            document.getElementById("backup-btn").addEventListener("click", function () {
+                fetch("/backup")
+                    .then((response) => {
+                        if (response.ok) {
+                            messageDiv.textContent = "Backup created successfully.";
+                            messageDiv.className = "message";
+                            fetchBackups();
+                        } else {
+                            response.json().then((data) => {
+                                messageDiv.textContent = data.error || "Error creating backup.";
+                                messageDiv.className = "error";
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error creating backup:", error);
+                        messageDiv.textContent = "Error creating backup.";
+                        messageDiv.className = "error";
+                    });
             });
-        });
 
-        // Handle download request
-        document.getElementById('downloadButton').addEventListener('click', function() {
-            const filename = document.getElementById('downloadFileName').value.trim();
+            // Handle restore form submission
+            document.getElementById("restore-form").addEventListener("submit", function (event) {
+                event.preventDefault();
 
-            if (!filename) {
-                document.getElementById('result').innerHTML = `
-                    <div class="error">Please provide a filename to download.</div>
-                `;
-                return;
+                const formData = new FormData(this);
+
+                fetch("/restore", {
+                    method: "POST",
+                    body: formData,
+                })
+                    .then((response) => {
+                        if (response.ok) {
+                            messageDiv.textContent = "Database restored successfully.";
+                            messageDiv.className = "message";
+                        } else {
+                            response.json().then((data) => {
+                                messageDiv.textContent = data.error || "Error restoring database.";
+                                messageDiv.className = "error";
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error restoring database:", error);
+                        messageDiv.textContent = "Error restoring database.";
+                        messageDiv.className = "error";
+                    });
+            });
+
+            // Delete backup
+            function deleteBackup(filename, button) {
+                if (confirm(`Are you sure you want to delete the backup "${filename}"?`)) {
+                    fetch(`/backups/${filename}`, {
+                        method: "DELETE",
+                    })
+                        .then((response) => {
+                            if (response.ok) {
+                                messageDiv.textContent = `"${filename}" deleted successfully.`;
+                                messageDiv.className = "message";
+                                button.closest("tr").remove();  // Remove the row from the table
+                            } else {
+                                response.json().then((data) => {
+                                    messageDiv.textContent = data.error || "Error deleting backup.";
+                                    messageDiv.className = "error";
+                                });
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error deleting backup:", error);
+                            messageDiv.textContent = "Error deleting backup.";
+                            messageDiv.className = "error";
+                        });
+                }
             }
 
-            const url = `/backup_restore/download/${filename}`;
-
-            fetch(url)
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = url; // Trigger the file download
-                } else {
-                    document.getElementById('result').innerHTML = `
-                        <div class="error">Error: File not found.</div>
-                    `;
-                }
-            })
-            .catch(error => {
-                document.getElementById('result').innerHTML = `
-                    <div class="error">Error: ${error.message}</div>
-                `;
-            });
+            // Load backups on page load
+            fetchBackups();
         });
     </script>
-
 </body>
 </html>

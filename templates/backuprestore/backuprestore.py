@@ -1,7 +1,8 @@
 import os
 import shutil
 from datetime import datetime
-from flask import Blueprint, jsonify, request, send_file, render_template
+from flask import Blueprint, jsonify, request, send_file, render_template, url_for, redirect
+from flask_login import current_user
 
 # Define the blueprint
 backup_restore_bp = Blueprint('backup_restore', __name__, template_folder='templates/backuprestore')
@@ -99,7 +100,52 @@ def list_backups():
     except Exception as e:
         return jsonify({'error': f'Error listing backups: {str(e)}'}), 500
 
+
+# Route to download a specific backup file
+@backup_restore_bp.route('/backups/<filename>', methods=['GET'])
+def download_backup(filename):
+    try:
+        backup_path = os.path.join(BACKUP_DIR, filename)
+        if not os.path.exists(backup_path):
+            return jsonify({'error': 'Backup file not found'}), 404
+
+        return send_file(
+            backup_path,
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        return jsonify({'error': f'Error downloading backup: {str(e)}'}), 500
+
+
+# Route to delete a specific backup file
+@backup_restore_bp.route('/backups/<filename>', methods=['DELETE'])
+def delete_backup(filename):
+    try:
+        # Full path of the backup file to delete
+        backup_path = os.path.join(BACKUP_DIR, filename)
+        
+        # Check if the file exists before trying to delete it
+        if not os.path.exists(backup_path):
+            return jsonify({'error': 'Backup file not found'}), 404
+
+        # Remove the backup file
+        os.remove(backup_path)
+
+        return jsonify({'message': f'Backup "{filename}" deleted successfully.'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Error deleting backup: {str(e)}'}), 500
+
+
+
 # Render the backup/restore UI page
 @backup_restore_bp.route('/backup_restore')
 def backup_restore_page():
+    if current_user.role != 1:
+        # Redirect to home page if user is not authorized
+        return redirect(url_for('dashboard.dashboard'))  # Replace 'home' with the name of your home route
+    
     return render_template('backuprestore/backuprestore.html')

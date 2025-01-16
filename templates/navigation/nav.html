@@ -8,13 +8,13 @@
     <nav class="sidebar">
         <ul class="navbar-links">
             <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/devicemanage">Device Management</a></li>
-            <li><a href="/timer">Timer</a></li>
+            <li><a href="/devicemanage" {% if current_user.role != 1 %}style="display:none"{% endif %}>Device Management</a></li>
+            <li><a href="/timer">Timer Scheduler</a></li>
             <li><a href="/automation">Automation Rule</a></li>
             <li><a href="/zone">Zone Management</a></li>
-            <li><a href="/users">User Management</a></li>
+            <li><a href="/users" {% if current_user.role != 1 %}style="display:none"{% endif %}>User Management</a></li>
             <li><a href="/feedback">Feedback</a></li>
-            <li><a href="/backup_restore">Backup Restore</a></li>
+            <li><a href="/backup_restore" {% if current_user.role != 1 %}style="display:none"{% endif %}>Backup Restore</a></li>
             <li><a href="/logout">Logout</a></li>  
         </ul>
     </nav>

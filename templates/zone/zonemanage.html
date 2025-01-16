@@ -19,11 +19,19 @@
 
         <h2>Create New Zone</h2>
         <form id="create-zone-form">
-            <input type="text" id="zone-name" placeholder="Zone Name" required />
-            <input type="text" id="zone-description" placeholder="Description" />
+            <div class="form-group">
+                <label for="zone-name">Zone Name</label>
+                <input type="text" id="zone-name" placeholder="Zone Name" required />
+            </div>
+            <div class="form-group">
+                <label for="zone-description">Description</label>
+                <input type="text" id="zone-description" placeholder="Description" />
+            </div>
 
             <h3>Select Sensors</h3>
-            <div id="sensor-tiles-container"></div>
+            <div id="sensor-checkbox-container">
+                <!-- Sensors will be listed here dynamically -->
+            </div>
 
             <button type="submit">Create Zone</button>
         </form>
@@ -42,8 +50,5 @@
             </form>
         </div>
     </div>
-    <script>
-        
-    </script>
 </body>
 </html>
