@@ -9,14 +9,14 @@ from templates.automationrule.automation import autobp
 from templates.zone.zone import zone_bp
 from templates.timerscheduler.timer import timerbp
 from templates.backuprestore.backuprestore import backup_restore_bp
-
+from dauncelery import celery_test_bp
 
 from flask_login import LoginManager, login_user, logout_user, current_user
 from datetime import timedelta
 from flask.sessions import SecureCookieSessionInterface
 import uuid
 from flask_socketio import SocketIO, emit
-
+from celery import Celery
 
 app = Flask(__name__)
 
@@ -28,9 +28,12 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 app.config['BROKER_ADDRESS'] = "atechpromqtt"
 app.config['BROKER_PORT'] = 1883
 app.config['MQTT_TOPIC'] = "home/#"
+app.config['CELERY_BROKER_URL'] = 'redis://atechpromqtt:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://atechpromqtt:6379/0'
+
+
 
 socketio = SocketIO(app, cors_allowed_origins="*")  
-
 
 app.register_blueprint(views) 
 app.register_blueprint(usermanage)
@@ -41,6 +44,9 @@ app.register_blueprint(zone_bp)
 app.register_blueprint(autobp)
 app.register_blueprint(timerbp)
 app.register_blueprint(backup_restore_bp)
+app.register_blueprint(celery_test_bp)
+
+
 # Initialize the database
 db.init_app(app)
 
@@ -48,6 +54,12 @@ db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'views.login'  
+
+
+#initalize celery 
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 class CustomSessionInterface(SecureCookieSessionInterface):
     def save_session(self, *args, **kwargs):
@@ -144,7 +156,10 @@ def create_initial_user(app):
         # Populate sensor types
         populate_sensor_types()
 
-
+# Celery task
+@celery.task
+def add_together(a, b):
+    return a + b
 
 @login_manager.user_loader
 def load_user(userid):

@@ -6,7 +6,6 @@ from flask_login import login_required, current_user
 import paho.mqtt.client as mqtt
 from database.database import db, User, Sensor, SensorType, AutomationRule
 from datetime import datetime, timedelta
-from threading import Lock
 from flask_socketio import SocketIO, emit
 
 
@@ -153,11 +152,10 @@ def control_relay(device_id, request_type, **kwargs):
         return {"error": str(e)}, 500
 
 global_sensor_data = {}
-sensor_data_lock = Lock()
 
 def fetch_and_categorize_sensor_data():
     """Fetch and categorize sensor data from the database."""
-    global global_sensor_data, sensor_data_lock
+    global global_sensor_data
 
     try:
         # Fetch all registered sensors and their types from the database
@@ -195,13 +193,13 @@ def fetch_and_categorize_sensor_data():
                 "sensor_type_id": sensor.sensor_type_id,
             })
 
-        # Update global sensor data with thread safety
-        with sensor_data_lock:
-            global_sensor_data = categorized_data
+        # Update global sensor data
+        global_sensor_data = categorized_data
 
     except Exception as e:
         logger.error(f"Error fetching sensor data: {e}")
         raise  # Re-raise the exception to handle it in the calling function
+
 
 
 @autobp.route('/automation/sensors', methods=['GET'])
@@ -214,10 +212,7 @@ def fetch_sensor_data():
 
         # Fetch and categorize sensor data
         fetch_and_categorize_sensor_data()
-
-        # Return categorized sensor data
-        with sensor_data_lock:
-            return jsonify(global_sensor_data), 200
+        return jsonify(global_sensor_data), 200
 
     except Exception as e:
         logger.error(f"Error fetching sensor data: {e}")
@@ -225,205 +220,202 @@ def fetch_sensor_data():
 
 last_rule_execution = {}
 last_refresh_time = datetime.now()
-refresh_lock = Lock()
 REFRESH_INTERVAL = 30  # Refresh interval in seconds
 
-@autobp.route('/automation/sensors/rule_applied', methods=['GET'])  
-@login_required  
-def fetch_sensor_rules_applied():  
+@autobp.route('/automation/sensors/rule_applied', methods=['GET'])
+@login_required
+def fetch_sensor_rules_applied():
     global last_rule_execution, last_refresh_time
 
-    def should_execute_rule(rule_id, debounce_seconds=60):  
-        """Check if enough time has passed since the last rule execution"""  
-        current_time = datetime.now()  
-        with refresh_lock:
-            last_execution = last_rule_execution.get(rule_id)  
-            
-            if last_execution is None or (current_time - last_execution) > timedelta(seconds=debounce_seconds):  
-                last_rule_execution[rule_id] = current_time  
-                return True  
-            return False  
+    def should_execute_rule(rule_id, debounce_seconds=60):
+        """Check if enough time has passed since the last rule execution"""
+        current_time = datetime.now()
+        last_execution = last_rule_execution.get(rule_id)
+        
+        if last_execution is None or (current_time - last_execution) > timedelta(seconds=debounce_seconds):
+            last_rule_execution[rule_id] = current_time
+            return True
+        return False
 
     def refresh_last_rule_execution():
         """Refresh the last_rule_execution dictionary if the refresh interval has passed"""
         global last_refresh_time
         current_time = datetime.now()
-        with refresh_lock:
-            if (current_time - last_refresh_time) > timedelta(seconds=REFRESH_INTERVAL):
-                last_rule_execution.clear()
-                last_refresh_time = current_time
-                logger.debug("Refreshed last_rule_execution dictionary")
+        if (current_time - last_refresh_time) > timedelta(seconds=REFRESH_INTERVAL):
+            last_rule_execution.clear()
+            last_refresh_time = current_time
+            logger.debug("Refreshed last_rule_execution dictionary")
 
-    def execute_automation_rule(rule_info, is_matched):  
-        """Execute automation rule based on the matching condition with debouncing"""  
-        if not rule_info['enabled']:  
-            return  
+    def execute_automation_rule(rule_info, is_matched):
+        """Execute automation rule based on the matching condition with debouncing"""
+        if not rule_info['enabled']:
+            return
+        
+        try:
+            rule_id = rule_info['rule_id']
             
-        try:  
-            rule_id = rule_info['rule_id']  
-            
-            if not should_execute_rule(rule_id):  
-                logger.debug(f"Skipping rule execution due to debounce: {rule_info['auto_title']}")  
-                return  
+            if not should_execute_rule(rule_id):
+                logger.debug(f"Skipping rule execution due to debounce: {rule_info['auto_title']}")
+                return
                 
-            relay_device_id = rule_info['relay_device_id']  
-            action = rule_info['action'].upper()  
+            relay_device_id = rule_info['relay_device_id']
+            action = rule_info['action'].upper()
             
-            if is_matched and action in ['ON', 'OFF']:  
-                response, status_code = control_relay(  
-                    device_id=relay_device_id,  
-                    request_type='POST',  
-                    json_data={'state': action}  
-                )  
+            if is_matched and action in ['ON', 'OFF']:
+                response, status_code = control_relay(
+                    device_id=relay_device_id,
+                    request_type='POST',
+                    json_data={'state': action}
+                )
                 
-                if status_code != 200:  
-                    logger.error(f"Failed to execute automation rule: {response.get('error', 'Unknown error')}")  
-                else:  
-                    logger.info(f"Successfully executed automation rule: {rule_info['auto_title']}")  
+                if status_code != 200:
+                    logger.error(f"Failed to execute automation rule: {response.get('error', 'Unknown error')}")
+                else:
+                    logger.info(f"Successfully executed automation rule: {rule_info['auto_title']}")
                     
-        except Exception as e:  
-            logger.error(f"Error executing automation rule: {str(e)}")  
+        except Exception as e:
+            logger.error(f"Error executing automation rule: {str(e)}")
 
-    def check_rule_match(value, condition, threshold):  
-        """Helper function to check if a value matches a rule's condition"""  
-        try:  
-            if value is None:  
-                return False  
+    def check_rule_match(value, condition, threshold):
+        """Helper function to check if a value matches a rule's condition"""
+        try:
+            if value is None:
+                return False
                 
-            # Handle numeric comparisons  
-            if isinstance(value, (int, float)) and threshold.replace('.', '').isdigit():  
-                numeric_value = float(value)  
-                numeric_threshold = float(threshold)  
+            # Handle numeric comparisons
+            if isinstance(value, (int, float)) and threshold.replace('.', '').isdigit():
+                numeric_value = float(value)
+                numeric_threshold = float(threshold)
                 
-                if condition == 'GREATER_THAN':  
-                    return numeric_value > numeric_threshold  
-                elif condition == 'LESS_THAN':  
-                    return numeric_value < numeric_threshold  
-                elif condition == 'EQUALS':  
-                    return numeric_value == numeric_threshold  
+                if condition == 'GREATER_THAN':
+                    return numeric_value > numeric_threshold
+                elif condition == 'LESS_THAN':
+                    return numeric_value < numeric_threshold
+                elif condition == 'EQUALS':
+                    return numeric_value == numeric_threshold
                     
-            # Handle string/state comparisons  
-            else:  
-                str_value = str(value).lower()  
-                str_threshold = str(threshold).lower()  
+            # Handle string/state comparisons
+            else:
+                str_value = str(value).lower()
+                str_threshold = str(threshold).lower()
                 
-                if condition == 'EQUALS':  
-                    return str_value == str_threshold  
+                if condition == 'EQUALS':
+                    return str_value == str_threshold
                     
-            return False  
+            return False
             
-        except (ValueError, TypeError):  
-            return False  
+        except (ValueError, TypeError):
+            return False
 
-    try:  
-        if not last_known_state:  
-            return jsonify({"message": "No sensor data available"}), 200  
+    try:
+        if not last_known_state:
+            return jsonify({"message": "No sensor data available"}), 200
 
-        current_user_id = current_user.userid  
+        current_user_id = current_user.userid
 
-        with sensor_data_lock:  
-            sensor_rules_data = {}  
+        sensor_rules_data = {}
+        
+        # Modified query to only fetch sensors with active rules
+        sensor_rules = (
+            db.session.query(
+                Sensor.id,
+                Sensor.device_id,
+                Sensor.sensor_key,
+                Sensor.sensor_type_id,
+                SensorType.type_key,
+                SensorType.display_name,
+                SensorType.unit,
+                SensorType.states,
+                AutomationRule.id.label('rule_id'),
+                AutomationRule.condition,
+                AutomationRule.threshold,
+                AutomationRule.relay_device_id,
+                AutomationRule.action,
+                AutomationRule.enabled,
+                AutomationRule.auto_title,
+                AutomationRule.auto_description
+            )
+            .join(SensorType, Sensor.sensor_type_id == SensorType.id)
+            .join(
+                AutomationRule,
+                db.and_(
+                    Sensor.id == AutomationRule.sensor_id,
+                    AutomationRule.user_id == current_user_id
+                )
+            )
+            .all()
+        )
+
+        # Refresh the last_rule_execution dictionary if needed
+        refresh_last_rule_execution()
+
+        # Process only sensors with rules
+        for sensor in sensor_rules:
+            sensor_type = sensor.type_key
+            if sensor_type not in sensor_rules_data:
+                sensor_rules_data[sensor_type] = {
+                    "type_display_name": sensor.display_name,
+                    "unit": sensor.unit,
+                    "states": sensor.states,
+                    "sensors": [],
+                }
+
+            current_value = last_known_state.get(sensor.device_id, {}).get("data", {}).get(sensor.sensor_key)
+
+            # Check if the rule conditions are currently matched
+            is_matched = check_rule_match(current_value, sensor.condition, sensor.threshold)
             
-            # Modified query to only fetch sensors with active rules  
-            sensor_rules = (  
-                db.session.query(  
-                    Sensor.id,  
-                    Sensor.device_id,  
-                    Sensor.sensor_key,  
-                    Sensor.sensor_type_id,  
-                    SensorType.type_key,  
-                    SensorType.display_name,  
-                    SensorType.unit,  
-                    SensorType.states,  
-                    AutomationRule.id.label('rule_id'),  
-                    AutomationRule.condition,  
-                    AutomationRule.threshold,  
-                    AutomationRule.relay_device_id,  
-                    AutomationRule.action,  
-                    AutomationRule.enabled,  
-                    AutomationRule.auto_title,  
-                    AutomationRule.auto_description  
-                )  
-                .join(SensorType, Sensor.sensor_type_id == SensorType.id)  
-                .join(  # Changed from outerjoin to join to only get sensors with rules  
-                    AutomationRule,  
-                    db.and_(  
-                        Sensor.id == AutomationRule.sensor_id,  
-                        AutomationRule.user_id == current_user_id  
-                    )  
-                )  
-                .all()  
-            )  
+            # Create a human-readable status message
+            status_message = (
+                f"Current value ({current_value}) "
+                f"{'matches' if is_matched else 'does not match'} "
+                f"condition: {sensor.condition} {sensor.threshold}"
+            )
 
-            # Refresh the last_rule_execution dictionary if needed
-            refresh_last_rule_execution()
+            rule_info = {
+                "rule_id": sensor.rule_id,
+                "condition": sensor.condition,
+                "threshold": sensor.threshold,
+                "relay_device_id": sensor.relay_device_id,
+                "action": sensor.action,
+                "enabled": sensor.enabled,
+                "auto_title": sensor.auto_title,
+                "auto_description": sensor.auto_description,
+                "is_matched": is_matched,
+                "status_message": status_message
+            }
+            
+            # Execute the automation rule if conditions are met
+            execute_automation_rule(rule_info, is_matched)
 
-            # Process only sensors with rules  
-            for sensor in sensor_rules:  
-                sensor_type = sensor.type_key  
-                if sensor_type not in sensor_rules_data:  
-                    sensor_rules_data[sensor_type] = {  
-                        "type_display_name": sensor.display_name,  
-                        "unit": sensor.unit,  
-                        "states": sensor.states,  
-                        "sensors": [],  
-                    }  
+            # Check if sensor already exists in the list
+            sensor_exists = False
+            for existing_sensor in sensor_rules_data[sensor_type]["sensors"]:
+                if existing_sensor["sensor_id"] == sensor.id:
+                    if "rules" not in existing_sensor:
+                        existing_sensor["rules"] = []
+                    existing_sensor["rules"].append(rule_info)
+                    sensor_exists = True
+                    break
 
-                current_value = last_known_state.get(sensor.device_id, {}).get("data", {}).get(sensor.sensor_key)  
+            # If sensor doesn't exist, add it
+            if not sensor_exists:
+                sensor_data = {
+                    "device_id": sensor.device_id,
+                    "sensor_key": sensor.sensor_key,
+                    "last_value": current_value,
+                    "sensor_id": sensor.id,
+                    "sensor_type_id": sensor.sensor_type_id,
+                    "rules": [rule_info]
+                }
+                sensor_rules_data[sensor_type]["sensors"].append(sensor_data)
 
-                # Check if the rule conditions are currently matched  
-                is_matched = check_rule_match(current_value, sensor.condition, sensor.threshold)  
-                
-                # Create a human-readable status message  
-                status_message = (  
-                    f"Current value ({current_value}) "  
-                    f"{'matches' if is_matched else 'does not match'} "  
-                    f"condition: {sensor.condition} {sensor.threshold}"  
-                )  
+        return jsonify(sensor_rules_data), 200
 
-                rule_info = {  
-                    "rule_id": sensor.rule_id,  
-                    "condition": sensor.condition,  
-                    "threshold": sensor.threshold,  
-                    "relay_device_id": sensor.relay_device_id,  
-                    "action": sensor.action,  
-                    "enabled": sensor.enabled,  
-                    "auto_title": sensor.auto_title,  
-                    "auto_description": sensor.auto_description,  
-                    "is_matched": is_matched,  
-                    "status_message": status_message  
-                }  
-                
-                # Execute the automation rule if conditions are met  
-                execute_automation_rule(rule_info, is_matched)  
-
-                # Check if sensor already exists in the list  
-                sensor_exists = False  
-                for existing_sensor in sensor_rules_data[sensor_type]["sensors"]:  
-                    if existing_sensor["sensor_id"] == sensor.id:  
-                        if "rules" not in existing_sensor:  
-                            existing_sensor["rules"] = []  
-                        existing_sensor["rules"].append(rule_info)  
-                        sensor_exists = True  
-                        break  
-
-                # If sensor doesn't exist, add it  
-                if not sensor_exists:  
-                    sensor_data = {  
-                        "device_id": sensor.device_id,  
-                        "sensor_key": sensor.sensor_key,  
-                        "last_value": current_value,  
-                        "sensor_id": sensor.id,  
-                        "sensor_type_id": sensor.sensor_type_id,  
-                        "rules": [rule_info]  
-                    }  
-                    sensor_rules_data[sensor_type]["sensors"].append(sensor_data)  
-
-            return jsonify(sensor_rules_data), 200  
-
-    except Exception as e:  
-        logger.error(f"Error fetching sensor rules data: {e}")  
+    except Exception as e:
+        logger.error(f"Error fetching sensor rules data: {e}")
         return jsonify({"error": "Failed to fetch sensor rules data", "message": str(e)}), 500
+
     
 
 

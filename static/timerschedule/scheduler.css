@@ -1,36 +1,46 @@
+/* General body styling */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    background-color: #f9f9f9;
 }
 
+/* Headings styling */
 h1, h2 {
-    margin-left: 250px; /* Ensure headings align with the main content */
+    padding-top: 20px;
+    color: #333;
 }
 
+/* Sidebar styling */
 .sidebar {
     position: fixed;
-    left: 0;
     top: 0;
+    left: 0;
     width: 250px;
     height: 100%;
     background-color: #f4f4f4;
     border-right: 1px solid #ccc;
-    padding: 10px;
+    padding: 20px;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
 }
 
+/* Main content styling */
 form, #timerList {
-    margin-left: 250px; /* Ensure the main content does not overlap with the sidebar */
+    margin-left: 270px; /* Space between sidebar and content */
     padding: 20px;
+    max-width: 800px;
+    width: 100%; /* Ensure content takes full width minus the sidebar */
 }
 
+/* Form input and textarea styling */
 label {
     display: block;
-    margin-top: 10px;
+    margin-top: 15px;
     font-weight: bold;
+    color: #555;
 }
 
 input[type="text"],
@@ -38,32 +48,92 @@ textarea,
 input[type="time"],
 select {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     margin-top: 5px;
     margin-bottom: 15px;
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
+    font-size: 14px;
 }
 
+/* Focus styles */
+input[type="text"]:focus,
+textarea:focus,
+input[type="time"]:focus,
+select:focus {
+    border-color: #007BFF;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* Button styling */
 button {
-    padding: 10px 15px;
+    padding: 10px 20px;
     background-color: #007BFF;
     color: #fff;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
+    margin-top: 10px;
+    transition: background-color 0.3s ease; /* Smooth hover transition */
 }
 
 button:hover {
     background-color: #0056b3;
 }
 
-div {
-    margin-bottom: 15px;
+/* Timer list styling */
+#timerList {
+    margin-top: 20px;
 }
 
+#timerList h2 {
+    margin-bottom: 20px;
+}
+
+/* Separator styling */
 hr {
-    margin-left: 250px; /* Align separator with main content */
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 20px 0;
+}
+
+/* Sidebar alignment for headings and content */
+h1, h2 {
+    margin-left: 270px; /* Ensure headings align with main content */
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    /* Sidebar styling for small screens */
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        box-shadow: none;
+    }
+
+    /* Remove left margin for smaller screens */
+    h1, h2, form, #timerList, hr {
+        margin-left: 0;
+    }
+
+    /* Adjust form and timer list padding for mobile */
+    form, #timerList {
+        padding: 10px;
+    }
+
+    /* Adjust button size for smaller screens */
+    button {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
 }

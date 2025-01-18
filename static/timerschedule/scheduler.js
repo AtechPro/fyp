@@ -248,5 +248,5 @@ function deleteTimer(timerId) {
 
 
 // Initial fetch and interval to update the list
-setInterval(fetchTimerList, 5000); // Update every 60 seconds
+setInterval(fetchTimerList, 10000); // Update every 60 seconds
 fetchTimerList();
