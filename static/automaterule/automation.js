@@ -290,7 +290,7 @@ document.addEventListener("DOMContentLoaded", function () {
             sensorSelect.addEventListener("change", (e) => updateThresholdField(e.target.value, categorizedSensors));
             ruleForm.addEventListener("submit", handleFormSubmit);
             fetchRuleAppliedStatus(); // Initial fetch
-            setInterval(fetchRuleAppliedStatus, 3000); // Periodic refresh
+            setInterval(fetchRuleAppliedStatus, 1000); // Time to Refresh 
         } catch (error) {
             console.error("Initialization error:", error);
             alert("Failed to initialize sensors. Check console for details.");
