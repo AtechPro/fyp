@@ -49,6 +49,7 @@ def backup_database():
 @backup_restore_bp.route('/restore', methods=['POST'])
 def restore_database():
     try:
+        # Check if the request contains a file
         if 'backup_file' not in request.files:
             return jsonify({'error': 'No backup file provided'}), 400
 
@@ -56,25 +57,19 @@ def restore_database():
         if backup_file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
 
-        # Check if the uploaded file is a valid backup
+        # Ensure the uploaded file is a .db file
         if not backup_file.filename.endswith('.db'):
             return jsonify({'error': 'Invalid backup file format. Only .db files are allowed.'}), 400
 
-        # Get the backup filename and save it temporarily
-        backup_file_path = os.path.join(BACKUP_DIR, backup_file.filename)
-        backup_file.save(backup_file_path)
-
-        # Check if the backup file is different from the current database file
-        if os.path.samefile(DB_PATH, backup_file_path):
-            return jsonify({'message': 'The backup file is the same as the current database. No restore needed.'}), 200
-
-        # Restore the database by overwriting the current .db file
-        shutil.copy(backup_file_path, DB_PATH)
+        # Directly replace the database file with the uploaded file
+        with open(DB_PATH, 'wb') as db_file:
+            db_file.write(backup_file.read())
 
         return jsonify({'message': 'Database restored successfully'}), 200
 
     except Exception as e:
         return jsonify({'error': f'Error during restore: {str(e)}'}), 500
+
 
 # Helper route to get list of available backups
 @backup_restore_bp.route('/backups', methods=['GET'])
