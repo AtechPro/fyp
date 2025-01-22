@@ -18,18 +18,21 @@
 
     <main class="content-container">
         <section class="feedback-form-container">
-            <h1>Submit Your Feedback</h1>
-            <form id="feedback-form">
-                <div class="form-group">
-                    <label for="feedback_title">Feedback Title:</label>
-                    <textarea id="feedback_title" name="feedback_title" rows="2" placeholder="Enter feedback title" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="feedback_desc">Your Feedback:</label>
-                    <textarea id="feedback_desc" name="feedback_desc" rows="6" placeholder="Write your feedback here" required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Submit</button>
-            </form>
+            <!-- Only render the form if the user is not an admin -->
+            {% if current_user.role != 1 %}
+                <h1>Submit Your Feedback</h1>
+                <form id="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback_title">Feedback Title:</label>
+                        <textarea id="feedback_title" name="feedback_title" rows="2" placeholder="Enter feedback title" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback_desc">Your Feedback:</label>
+                        <textarea id="feedback_desc" name="feedback_desc" rows="6" placeholder="Write your feedback here" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            {% endif %}
         </section>
 
         <section id="feedback-list">

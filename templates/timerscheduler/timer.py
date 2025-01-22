@@ -284,7 +284,7 @@ def get_current_time():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
     
     
-@timerbp.route('/timer/trigger_relay', methods=['GET'])
+@timerbp.route('/timer/trigger_relay', methods=['GET']) # can't impeliment on the background
 def trigger_relay():
     try:
         # Fetch all timers for the current user
@@ -295,7 +295,7 @@ def trigger_relay():
         
         # Get the current time and day
         current_time = datetime.now().strftime("%H:%M")
-        current_day = datetime.now().strftime("%a")  # This returns 'Mon', 'Tue', etc.
+        current_day = datetime.now().strftime("%a") 
         
         triggered_timers = []
 
